@@ -29,25 +29,49 @@ class Fork {
     }
 }
 
-class Philosopher implements Runnable {
+abstract class AbstractPhilosopher implements Runnable {
     public static final int SLEEP_TIME = 500;
-    private final Random random = new Random();
-    private final int id;
-    private final List<Fork> forks;
+    protected final Random random = new Random();
+    protected final int id;
+    protected final List<Fork> forks;
 
-    Philosopher(int id, List<Fork> forks) {
+    AbstractPhilosopher(int id, List<Fork> forks) {
         this.id = id;
         this.forks = forks;
     }
 
-    private void think() throws InterruptedException {
+    protected void think() throws InterruptedException {
         System.out.println(String.format("Philosopher %d is thinking...", this.id));
-        Thread.sleep(this.random.nextInt(Philosopher.SLEEP_TIME));
+        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
         System.out.println(String.format("Philosopher %d stops thinking...", this.id));
     }
 
+    @Override
+    public void run() {
+        try {
+            // start with random delay for each philosopher
+            Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+
+            for (int i = 0; i < 100; i++) {
+                this.eat();
+                this.think();
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    abstract public void eat() throws InterruptedException;
+}
+
+class Philosopher1 extends AbstractPhilosopher {
+    Philosopher1(int id, List<Fork> forks) {
+        super(id, forks);
+    }
+
     // v1: use left fork first
-    private void eat() throws InterruptedException {
+    @Override
+    public void eat() throws InterruptedException {
         // use left fork first
         Fork leftFork = this.forks.get(this.id);
 
@@ -75,7 +99,7 @@ class Philosopher implements Runnable {
 
         // eating process...
         System.out.println(String.format("Philosopher %d is eating...", this.id));
-        Thread.sleep(this.random.nextInt(Philosopher.SLEEP_TIME));
+        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
         System.out.println(String.format("Philosopher %d stops eating and releases forks", this.id));
 
         synchronized (leftFork) {
@@ -88,21 +112,6 @@ class Philosopher implements Runnable {
             rightFork.notifyAll();
         }
     }
-
-    @Override
-    public void run() {
-        try {
-            // start with random delay for each philosopher
-            Thread.sleep(this.random.nextInt(Philosopher.SLEEP_TIME));
-
-            for (int i = 0; i < 100; i++) {
-                    this.eat();
-                    this.think();
-            }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
 }
 
 public class Sol1 {
@@ -113,12 +122,12 @@ public class Sol1 {
             forks.add(new Fork(i));
         }
 
-        List<Philosopher> philosophers = new ArrayList<>(forkCount);
+        List<AbstractPhilosopher> philosophers = new ArrayList<>(forkCount);
         for (int i = 0; i < forkCount; i++) {
-            philosophers.add(new Philosopher(i, forks));
+            philosophers.add(new Philosopher1(i, forks));
         }
 
-        for (Philosopher philosopher : philosophers) {
+        for (AbstractPhilosopher philosopher : philosophers) {
             new Thread(philosopher).start();
         }
     }
