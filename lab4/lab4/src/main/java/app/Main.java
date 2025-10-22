@@ -3,6 +3,8 @@ package app;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 class Fork {
     private final int id;
@@ -82,7 +84,7 @@ class Philosopher1 extends AbstractPhilosopher {
 
             System.out.println(String.format("Philosopher %d takes left fork", this.id));
             leftFork.use();
-            leftFork.notify();
+            leftFork.notifyAll();
         }
 
         Fork rightFork = this.forks.get((this.id + 1) % this.forks.size());
@@ -94,7 +96,7 @@ class Philosopher1 extends AbstractPhilosopher {
 
             System.out.println(String.format("Philosopher %d takes right fork", this.id));
             rightFork.use();
-            rightFork.notify();
+            rightFork.notifyAll();
         }
 
         // eating process...
@@ -114,20 +116,93 @@ class Philosopher1 extends AbstractPhilosopher {
     }
 }
 
+class Philosopher2 implements Runnable {
+    public static final int SLEEP_TIME = 500;
+    protected final Random random = new Random();
+    protected final int id;
+    protected final List<Lock> forks;
+
+    Philosopher2(int id, List<Lock> forks) {
+        this.id = id;
+        this.forks = forks;
+    }
+
+    protected void think() throws InterruptedException {
+        System.out.println(String.format("Philosopher %d is thinking...", this.id));
+        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+        System.out.println(String.format("Philosopher %d stops thinking...", this.id));
+    }
+
+    // v1: use left fork first
+    public void eat() throws InterruptedException {
+        // use left fork first
+        Lock firstFork = this.forks.get(this.id);
+        Lock secondFork = this.forks.get((this.id + 1) % this.forks.size());
+
+        if (this.random.nextInt(2) == 0) {
+            Lock tmpFork = firstFork;
+            firstFork = secondFork;
+            secondFork = tmpFork;
+        }
+
+        firstFork.lock();
+        System.out.println(String.format("Philosopher %d takes left fork", this.id));
+        firstFork.unlock();
+
+        secondFork.lock();
+        System.out.println(String.format("Philosopher %d takes right fork", this.id));
+        secondFork.unlock();
+    }
+
+    @Override
+    public void run() {
+        try {
+            // start with random delay for each philosopher
+            Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+
+            for (int i = 0; i < 100; i++) {
+                this.eat();
+                this.think();
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+
 public class Main {
+    // v1
+//    public static void main(String[] args) {
+//        int forkCount = 5;
+//        List<Fork> forks = new ArrayList<>(forkCount);
+//        for (int i = 0; i < forkCount; i++) {
+//            forks.add(new Fork(i));
+//        }
+//
+//        List<AbstractPhilosopher> philosophers = new ArrayList<>(forkCount);
+//        for (int i = 0; i < forkCount; i++) {
+//            philosophers.add(new Philosopher1(i, forks));
+//        }
+//
+//        for (AbstractPhilosopher philosopher : philosophers) {
+//            new Thread(philosopher).start();
+//        }
+//    }
+
+    // v2
     public static void main(String[] args) {
         int forkCount = 5;
-        List<Fork> forks = new ArrayList<>(forkCount);
+        List<Lock> forks = new ArrayList<>(forkCount);
         for (int i = 0; i < forkCount; i++) {
-            forks.add(new Fork(i));
+            forks.add(new ReentrantLock());
         }
 
-        List<AbstractPhilosopher> philosophers = new ArrayList<>(forkCount);
+        List<Philosopher2> philosophers = new ArrayList<>(forkCount);
         for (int i = 0; i < forkCount; i++) {
-            philosophers.add(new Philosopher1(i, forks));
+            philosophers.add(new Philosopher2(i, forks));
         }
 
-        for (AbstractPhilosopher philosopher : philosophers) {
+        for (Philosopher2 philosopher : philosophers) {
             new Thread(philosopher).start();
         }
     }
