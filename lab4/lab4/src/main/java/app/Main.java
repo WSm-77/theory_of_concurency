@@ -114,7 +114,7 @@ class Philosopher1 extends AbstractPhilosopher {
     }
 }
 
-public class Sol1 {
+public class Main {
     public static void main(String[] args) {
         int forkCount = 5;
         List<Fork> forks = new ArrayList<>(forkCount);
