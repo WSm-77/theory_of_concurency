@@ -1,10 +1,8 @@
 package app;
 
+import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.Random;
-
-
-
 
 class UniqId {
     private static int id = 0;
@@ -16,18 +14,22 @@ class UniqId {
 
 abstract class Person extends Thread {
     final int sleepTime;
+    private final int _id;
 
     Person () {
         final Random rand = new Random();
         this.sleepTime = rand.nextInt(20) * 50;
+        this._id = UniqId.newId();
     }
 }
 
 class Producer extends Person {
     private final Buffer _buf;
 
+
     Producer(Buffer buf) {
         this._buf = buf;
+
     }
 
 
@@ -44,17 +46,16 @@ class Producer extends Person {
                 while (_buf.isFull()) {
                     try {
                         System.out.println(String.format("%d. Waiting for buffer to not be full", waitCnt++));
-                        wait();
+                        _buf.wait();
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
                 }
 
                 _buf.put(1);
-                System.out.println(String.format("Producing -> buff size=%d", _buf.getBuffCount()));
+                System.out.println(String.format("[%d] Producing -> buff size=%d", this._id, _buf.getBuffCount()));
+                _buf.notifyAll();
             }
-
-            _buf.put(i);
         }
     }
 }
@@ -79,14 +80,15 @@ class Consumer extends Person {
 
                 while (_buf.isEmpty()) {
                     try {
-                        System.out.println(String.format("%d. Waiting for buffer to not be full", waitCnt++));
-                        wait();
+                        System.out.println(String.format("%d. Waiting for buffer to not be empty", waitCnt++));
+                        _buf.wait();
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
                 }
 
-                System.out.println(String.format("Consuming -> buff size=%d",_buf.get()));
+                System.out.println(String.format("[%d] Consuming -> buff size=%d", this._id, _buf.get()));
+                _buf.notifyAll();
             }
         }
     }
@@ -101,21 +103,34 @@ class Buffer {
     }
 
     synchronized public void put(int i) {
-        if (!this.isFull()) {
-            this.buffCount += i;
-        }
-
-        this.notifyAll();
+        this.buffCount += i;
+//        if (!this.isFull()) {
+//            this.buffCount += i;
+//        }
+//
+//        this.notifyAll();
     }
 
+//    synchronized public int get() {
+//        if (!this.isEmpty()) {
+//            this.notifyAll();
+//            return 0;
+//        }
+//
+//        int ret = this.buffCount--;
+//        this.notifyAll();
+//
+//        return ret;
+//    }
+
     synchronized public int get() {
-        if (!this.isEmpty()) {
-            this.notifyAll();
-            return 0;
-        }
+//        if (!this.isEmpty()) {
+//            this.notifyAll();
+//            return 0;
+//        }
 
         int ret = this.buffCount--;
-        this.notifyAll();
+//        this.notifyAll();
 
         return ret;
     }
@@ -141,9 +156,21 @@ public class CondWaitEx {
         Producer producer = new Producer(buffer);
         Consumer consumer = new Consumer(buffer);
 
+        int producersCnt = 5;
+        int consumersCnt = 5;
+
+        Producer[] producers = new Producer[producersCnt];
+        Consumer[] consumers = new Consumer[consumersCnt];
+
         try {
-            producer.start();
-            consumer.start();
+            for (int i = 0; i < producersCnt; ++i) {
+                producers[i] = new Producer(buffer);
+                producers[i].start();
+            }
+            for (int i = 0; i < consumersCnt; ++i) {
+                consumers[i] = new Consumer(buffer);
+                consumers[i].start();
+            }
         } catch (Exception e) {
             System.out.println(e);
         }
