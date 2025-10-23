@@ -334,7 +334,7 @@ class Philosopher5 implements Runnable {
         this.forks = forks;
     }
 
-    public void setMediator5(Mediator5 mediator) {
+    public void setMediator(Mediator5 mediator) {
         this.mediator = mediator;
     }
 
@@ -390,6 +390,139 @@ class Philosopher5 implements Runnable {
         secondFork.unlock();
 
         this.mediator.notifyForkRelease(this);
+    }
+
+    @Override
+    public void run() {
+        try {
+            // start with random delay for each philosopher
+            Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+
+            for (int i = 0; i < 100; i++) {
+                this.eat();
+                this.think();
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+
+class Mediator6 {
+    private final List<Philosopher6> philosophers;
+    private Philosopher6 haltedPhilosopher = null;
+
+    Mediator6(List<Philosopher6> philosophers) {
+        this.philosophers = philosophers;
+
+        Philosopher6 philosopherToHalt = philosophers.getLast();
+        philosopherToHalt.halt();
+
+        this.haltedPhilosopher = philosopherToHalt;
+    }
+
+    public void notifyForkRelease(Philosopher6 prevHaltedPhilosopher) {
+        Philosopher6 philosopherToHalt = null;
+        while (philosopherToHalt == null) {
+            synchronized (this.philosophers) {
+                for (var philosopher : this.philosophers) {
+                    if (philosopher == prevHaltedPhilosopher)
+                        continue;
+
+                    if (!this.haltedPhilosopher.holdsFork() && !philosopher.holdsFork()) {
+                        philosopherToHalt = philosopher;
+                        philosopherToHalt.halt();
+                        this.haltedPhilosopher.awake();
+                        this.haltedPhilosopher = philosopherToHalt;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+class Philosopher6 implements Runnable {
+    public static final int SLEEP_TIME = 500;
+    protected final Random random = new Random();
+    protected final int id;
+    protected final List<Lock> forks;
+    protected Mediator6 mediator;
+    private boolean isHalted = false;
+    private boolean holdsFork = false;
+
+    Philosopher6(int id, List<Lock> forks) {
+        this.id = id;
+        this.forks = forks;
+    }
+
+    public void setMediator(Mediator6 mediator) {
+        this.mediator = mediator;
+    }
+
+    synchronized public void awake() {
+        this.isHalted = false;
+
+        System.out.println(String.format("Philosopher %d goes back to canteen", this.id));
+    }
+
+    public void halt() {
+        this.isHalted = true;
+
+        System.out.println(String.format("Philosopher %d leaves canteen", this.id));
+    }
+
+    public boolean holdsFork() {
+        return this.holdsFork;
+    }
+
+    protected void think() throws InterruptedException {
+        System.out.println(String.format("Philosopher %d is thinking...", this.id));
+        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+        System.out.println(String.format("Philosopher %d stops thinking...", this.id));
+    }
+
+    // v1: use left fork first
+    public void eat() throws InterruptedException {
+        // use left fork first
+        Lock firstFork = this.forks.get(this.id);
+        Lock secondFork = this.forks.get((this.id + 1) % this.forks.size());
+        String firstForkString = "left";
+        String secondForkString = "right";
+
+        // try to take right fork first
+        if (this.isHalted) {
+            Lock tmp = firstFork;
+            firstFork = secondFork;
+            secondFork = tmp;
+
+            String tmpStr = firstForkString;
+            firstForkString = secondForkString;
+            secondForkString = tmpStr;
+        }
+
+        firstFork.lock();
+        this.holdsFork = true;
+        System.out.println(String.format("Philosopher %d takes %s fork", this.id, firstForkString));
+
+        secondFork.lock();
+        this.holdsFork = false;
+        System.out.println(String.format("Philosopher %d takes %s fork", this.id, secondForkString));
+
+        System.out.println(String.format("Philosopher %d eats...", this.id));
+
+        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+
+        System.out.println(String.format("Philosopher %d stops eating and releases forks", this.id));
+
+        firstFork.unlock();
+        secondFork.unlock();
+
+        this.holdsFork = false;
+
+        if (this.isHalted) {
+            this.mediator.notifyForkRelease(this);
+        }
     }
 
     @Override
@@ -482,24 +615,46 @@ public class Main {
 //    }
 
     // v5
+//    public static void main(String[] args) {
+//        int forkCount = 5;
+//        List<Lock> forks = new ArrayList<>(forkCount);
+//
+//
+//        for (int i = 0; i < forkCount; i++) {
+//            forks.add(new ReentrantLock());
+//        }
+//
+//        List<Philosopher5> philosophers = new ArrayList<>(forkCount);
+//        for (int i = 0; i < forkCount; i++) {
+//            philosophers.add(new Philosopher5(i, forks));
+//        }
+//
+//        Mediator5 mediator = new Mediator5(philosophers.getLast());
+//
+//        for (Philosopher5 philosopher : philosophers) {
+//            philosopher.setMediator(mediator);
+//            new Thread(philosopher).start();
+//        }
+//    }
+
+    // v6
     public static void main(String[] args) {
         int forkCount = 5;
         List<Lock> forks = new ArrayList<>(forkCount);
-
 
         for (int i = 0; i < forkCount; i++) {
             forks.add(new ReentrantLock());
         }
 
-        List<Philosopher5> philosophers = new ArrayList<>(forkCount);
+        List<Philosopher6> philosophers = new ArrayList<>(forkCount);
         for (int i = 0; i < forkCount; i++) {
-            philosophers.add(new Philosopher5(i, forks));
+            philosophers.add(new Philosopher6(i, forks));
         }
 
-        Mediator5 mediator = new Mediator5(philosophers.getLast());
+        Mediator6 mediator = new Mediator6(philosophers);
 
-        for (Philosopher5 philosopher : philosophers) {
-            philosopher.setMediator5(mediator);
+        for (Philosopher6 philosopher : philosophers) {
+            philosopher.setMediator(mediator);
             new Thread(philosopher).start();
         }
     }
