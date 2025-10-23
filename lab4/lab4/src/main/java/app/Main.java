@@ -3,6 +3,7 @@ package app;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -116,6 +117,7 @@ class Philosopher1 extends AbstractPhilosopher {
     }
 }
 
+
 class Philosopher2 implements Runnable {
     public static final int SLEEP_TIME = 500;
     protected final Random random = new Random();
@@ -170,6 +172,112 @@ class Philosopher2 implements Runnable {
     }
 }
 
+class Philosopher3 implements Runnable {
+    public static final int SLEEP_TIME = 500;
+    protected final Random random = new Random();
+    protected final int id;
+    protected final List<Semaphore> forks;
+
+    Philosopher3(int id, List<Semaphore> forks) {
+        this.id = id;
+        this.forks = forks;
+    }
+
+    protected void think() throws InterruptedException {
+        System.out.println(String.format("Philosopher %d is thinking...", this.id));
+        Thread.sleep(this.random.nextInt(SLEEP_TIME));
+        System.out.println(String.format("Philosopher %d stops thinking...", this.id));
+    }
+
+    // v1: use left fork first
+    public void eat() throws InterruptedException {
+        // use left fork first
+        Semaphore firstFork = this.forks.get(this.id);
+        Semaphore secondFork = this.forks.get((this.id + 1) % this.forks.size());
+        String firstForkStr = "left";
+        String secondForkStr = "right";
+
+
+        if (this.id % 2 == 1) {
+            Semaphore tmp = firstFork;
+            firstFork = secondFork;
+            secondFork = tmp;
+        }
+
+        firstFork.acquire();
+        System.out.println(String.format("Philosopher %d takes %s fork", this.id));
+        firstFork.release();
+
+        secondFork.acquire();
+        System.out.println(String.format("Philosopher %d takes %s fork", this.id));
+        secondFork.release();
+    }
+
+    @Override
+    public void run() {
+        try {
+            // start with random delay for each philosopher
+            Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+
+            for (int i = 0; i < 100; i++) {
+                this.eat();
+                this.think();
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+
+class Philosopher4 implements Runnable {
+    public static final int SLEEP_TIME = 500;
+    protected final Random random = new Random();
+    protected final int id;
+    protected final List<Lock> forks;
+
+    Philosopher4(int id, List<Lock> forks) {
+        this.id = id;
+        this.forks = forks;
+    }
+
+    protected void think() throws InterruptedException {
+        System.out.println(String.format("Philosopher %d is thinking...", this.id));
+        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+        System.out.println(String.format("Philosopher %d stops thinking...", this.id));
+    }
+
+    // v1: use left fork first
+    public void eat() throws InterruptedException {
+        // use left fork first
+        Lock firstFork = this.forks.get(this.id);
+        Lock secondFork = this.forks.get((this.id + 1) % this.forks.size());
+
+        firstFork.lock();
+        secondFork.lock();
+
+        System.out.println(String.format("Philosopher %d takes left fork", this.id));
+        System.out.println(String.format("Philosopher %d takes right fork", this.id));
+
+        firstFork.unlock();
+        secondFork.unlock();
+    }
+
+    @Override
+    public void run() {
+        try {
+            // start with random delay for each philosopher
+            Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+
+            for (int i = 0; i < 100; i++) {
+                this.eat();
+                this.think();
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+
 public class Main {
     // v1
 //    public static void main(String[] args) {
@@ -190,19 +298,39 @@ public class Main {
 //    }
 
     // v2
+//    public static void main(String[] args) {
+//        int forkCount = 5;
+//        List<Lock> forks = new ArrayList<>(forkCount);
+//        for (int i = 0; i < forkCount; i++) {
+//            forks.add(new ReentrantLock());
+//        }
+//
+//        List<Philosopher2> philosophers = new ArrayList<>(forkCount);
+//        for (int i = 0; i < forkCount; i++) {
+//            philosophers.add(new Philosopher2(i, forks));
+//        }
+//
+//        for (Philosopher2 philosopher : philosophers) {
+//            new Thread(philosopher).start();
+//        }
+//    }
+
+    // v4
     public static void main(String[] args) {
+
+        Fork f = new Fork(1);
         int forkCount = 5;
         List<Lock> forks = new ArrayList<>(forkCount);
         for (int i = 0; i < forkCount; i++) {
             forks.add(new ReentrantLock());
         }
 
-        List<Philosopher2> philosophers = new ArrayList<>(forkCount);
+        List<Philosopher4> philosophers = new ArrayList<>(forkCount);
         for (int i = 0; i < forkCount; i++) {
-            philosophers.add(new Philosopher2(i, forks));
+            philosophers.add(new Philosopher4(i, forks));
         }
 
-        for (Philosopher2 philosopher : philosophers) {
+        for (Philosopher4 philosopher : philosophers) {
             new Thread(philosopher).start();
         }
     }
