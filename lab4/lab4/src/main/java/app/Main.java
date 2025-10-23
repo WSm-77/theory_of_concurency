@@ -306,6 +306,108 @@ class Philosopher4 implements Runnable {
     }
 }
 
+class Mediator5 {
+    private Philosopher5 haltedPhilosopher = null;
+
+    Mediator5(Philosopher5 philosopherToHalt) {
+        philosopherToHalt.halt();
+        this.haltedPhilosopher = philosopherToHalt;
+    }
+
+    public void notifyForkRelease(Philosopher5 philosopher) {
+        philosopher.halt();
+        this.haltedPhilosopher.awake();
+        this.haltedPhilosopher = philosopher;
+    }
+}
+
+class Philosopher5 implements Runnable {
+    public static final int SLEEP_TIME = 500;
+    protected final Random random = new Random();
+    protected final int id;
+    protected final List<Lock> forks;
+    protected Mediator5 mediator;
+    private boolean isHalted = false;
+
+    Philosopher5(int id, List<Lock> forks) {
+        this.id = id;
+        this.forks = forks;
+    }
+
+    public void setMediator5(Mediator5 mediator) {
+        this.mediator = mediator;
+    }
+
+    synchronized public void awake() {
+        this.isHalted = false;
+
+        System.out.println(String.format("Philosopher %d awakes", this.id));
+
+        this.notify();
+    }
+
+    public void halt() {
+        this.isHalted = true;
+
+        System.out.println(String.format("Philosopher %d is halted", this.id));
+    }
+
+    public boolean isHalted() {
+        return this.isHalted;
+    }
+
+    protected void think() throws InterruptedException {
+        System.out.println(String.format("Philosopher %d is thinking...", this.id));
+        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+        System.out.println(String.format("Philosopher %d stops thinking...", this.id));
+    }
+
+    // v1: use left fork first
+    public void eat() throws InterruptedException {
+        // use left fork first
+        Lock firstFork = this.forks.get(this.id);
+        Lock secondFork = this.forks.get((this.id + 1) % this.forks.size());
+
+        synchronized (this) {
+            while (this.isHalted) {
+                this.wait();
+            }
+        }
+
+        firstFork.lock();
+        System.out.println(String.format("Philosopher %d takes left fork", this.id));
+
+        secondFork.lock();
+        System.out.println(String.format("Philosopher %d takes right fork", this.id));
+
+        System.out.println(String.format("Philosopher %d eats...", this.id));
+
+        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+
+        System.out.println(String.format("Philosopher %d stops eating and releases forks", this.id));
+
+        firstFork.unlock();
+        secondFork.unlock();
+
+        this.mediator.notifyForkRelease(this);
+    }
+
+    @Override
+    public void run() {
+        try {
+            // start with random delay for each philosopher
+            Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+
+            for (int i = 0; i < 100; i++) {
+                this.eat();
+                this.think();
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+
 public class Main {
     // v1
 //    public static void main(String[] args) {
@@ -344,27 +446,25 @@ public class Main {
 //    }
 
     //   v3
-    public static void main(String[] args) {
-        int forkCount = 5;
-        List<Semaphore> forks = new ArrayList<>(forkCount);
-        for (int i = 0; i < forkCount; i++) {
-            forks.add(new Semaphore(1));
-        }
-
-        List<Philosopher3> philosophers = new ArrayList<>(forkCount);
-        for (int i = 0; i < forkCount; i++) {
-            philosophers.add(new Philosopher3(i, forks));
-        }
-
-        for (Philosopher3 philosopher : philosophers) {
-            new Thread(philosopher).start();
-        }
-    }
+//    public static void main(String[] args) {
+//        int forkCount = 5;
+//        List<Semaphore> forks = new ArrayList<>(forkCount);
+//        for (int i = 0; i < forkCount; i++) {
+//            forks.add(new Semaphore(1));
+//        }
+//
+//        List<Philosopher3> philosophers = new ArrayList<>(forkCount);
+//        for (int i = 0; i < forkCount; i++) {
+//            philosophers.add(new Philosopher3(i, forks));
+//        }
+//
+//        for (Philosopher3 philosopher : philosophers) {
+//            new Thread(philosopher).start();
+//        }
+//    }
 
     // v4
 //    public static void main(String[] args) {
-//
-//        Fork f = new Fork(1);
 //        int forkCount = 5;
 //        List<Lock> forks = new ArrayList<>(forkCount);
 //        for (int i = 0; i < forkCount; i++) {
@@ -380,4 +480,27 @@ public class Main {
 //            new Thread(philosopher).start();
 //        }
 //    }
+
+    // v5
+    public static void main(String[] args) {
+        int forkCount = 5;
+        List<Lock> forks = new ArrayList<>(forkCount);
+
+
+        for (int i = 0; i < forkCount; i++) {
+            forks.add(new ReentrantLock());
+        }
+
+        List<Philosopher5> philosophers = new ArrayList<>(forkCount);
+        for (int i = 0; i < forkCount; i++) {
+            philosophers.add(new Philosopher5(i, forks));
+        }
+
+        Mediator5 mediator = new Mediator5(philosophers.getLast());
+
+        for (Philosopher5 philosopher : philosophers) {
+            philosopher.setMediator5(mediator);
+            new Thread(philosopher).start();
+        }
+    }
 }
