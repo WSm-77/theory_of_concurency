@@ -1,7 +1,6 @@
 package app;
 
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.locks.Lock;
 
 // v2: use random fork first

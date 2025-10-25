@@ -1,59 +1,38 @@
 package app;
 
 import java.util.List;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
 
 // v5: solution with mediator
 public class Philosopher5 extends AbstractPhilosopher {
     protected final List<Lock> forks;
-    protected Mediator5 mediator;
-    private boolean isHalted = false;
+    protected final Semaphore canteen;
     private Lock firstFork;
     private Lock secondFork;
 
-    Philosopher5(int id, List<Lock> forks) {
+    Philosopher5(int id, List<Lock> forks, Semaphore canteen) {
         super(id);
         this.forks = forks;
-    }
-
-    public void setMediator(Mediator5 mediator) {
-        this.mediator = mediator;
-    }
-
-    synchronized public void awake() {
-        this.isHalted = false;
-
-        System.out.println(String.format("Philosopher %d awakes", this.id));
-
-        this.notify();
-    }
-
-    public void halt() {
-        this.isHalted = true;
-
-        System.out.println(String.format("Philosopher %d is halted", this.id));
-    }
-
-    public boolean isHalted() {
-        return this.isHalted;
+        this.canteen = canteen;
     }
 
     @Override
     public void acquireForks() throws InterruptedException {
+        // use left fork first
         firstFork = this.forks.get(this.id);
         secondFork = this.forks.get((this.id + 1) % this.forks.size());
+        String firstForkString = "left";
+        String secondForkString = "right";
 
-        synchronized (this) {
-            while (this.isHalted) {
-                this.wait();
-            }
-        }
+        // acquire access to canteen
+        this.canteen.acquire();
 
         firstFork.lock();
-        System.out.println(String.format("Philosopher %d takes left fork", this.id));
+        System.out.println(String.format("Philosopher %d takes %s fork", this.id, firstForkString));
 
         secondFork.lock();
-        System.out.println(String.format("Philosopher %d takes right fork", this.id));
+        System.out.println(String.format("Philosopher %d takes %s fork", this.id, secondForkString));
     }
 
     @Override
@@ -61,6 +40,6 @@ public class Philosopher5 extends AbstractPhilosopher {
         firstFork.unlock();
         secondFork.unlock();
 
-        this.mediator.notifyForkRelease(this);
+        this.canteen.release();
     }
 }

@@ -87,14 +87,11 @@ public class Main {
                         forks.add(new ReentrantLock());
                     }
 
+                    Semaphore canteen = new Semaphore(forkCount - 1);
+
                     List<AbstractPhilosopher> philosophers = new ArrayList<>(forkCount);
                     for (int i = 0; i < forkCount; i++) {
-                        philosophers.add(new Philosopher5(i, forks));
-                    }
-
-                    Mediator5 mediator = new Mediator5((Philosopher5) philosophers.get(forkCount - 1));
-                    for (AbstractPhilosopher philosopher : philosophers) {
-                        ((Philosopher5)philosopher).setMediator(mediator);
+                        philosophers.add(new Philosopher5(i, forks, canteen));
                     }
 
                     meanExecutionTimes = Main.getMeanExecutionTime(philosophers, executor);
@@ -147,9 +144,15 @@ public class Main {
 
     public static void main(String[] args) {
         // Choose which solution to run (1..6)
-        final int sol = 6; // change this value to run different variants
         final int forkCount = 5;
 
-        Main.execute(sol, forkCount);
+        {
+            final int sol = 5; // change this value to run different variants
+            Main.execute(sol, forkCount);
+        }
+
+//        for (int sol = 1; sol <= 6; sol++) {
+//            Main.execute(sol, forkCount);
+//        }
     }
 }

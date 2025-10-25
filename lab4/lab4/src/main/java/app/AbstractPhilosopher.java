@@ -4,7 +4,7 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 
 abstract public class AbstractPhilosopher implements Callable<Double> {
-    public static final int CYCLES_COUNT = 10;
+    public static final int CYCLES_COUNT = 100;
     public static final int SLEEP_TIME = 10;
     protected final Random random = new Random();
     protected final int id;
@@ -35,6 +35,7 @@ abstract public class AbstractPhilosopher implements Callable<Double> {
             Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
 
             for (int i = 0; i < AbstractPhilosopher.CYCLES_COUNT; i++) {
+                System.out.println(String.format("Philosopher %d cycle = %d", this.id, i));
                 // measure waiting time
                 long startTime = System.nanoTime();
 
