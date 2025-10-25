@@ -1,0 +1,39 @@
+package app;
+
+import java.util.List;
+import java.util.Random;
+
+abstract public class AbstractPhilosopher implements Runnable {
+    public static final int SLEEP_TIME = 500;
+    protected final Random random = new Random();
+    protected final int id;
+    protected final List<Fork> forks;
+
+    AbstractPhilosopher(int id, List<Fork> forks) {
+        this.id = id;
+        this.forks = forks;
+    }
+
+    protected void think() throws InterruptedException {
+        System.out.println(String.format("Philosopher %d is thinking...", this.id));
+        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+        System.out.println(String.format("Philosopher %d stops thinking...", this.id));
+    }
+
+    @Override
+    public void run() {
+        try {
+            // start with random delay for each philosopher
+            Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+
+            for (int i = 0; i < 100; i++) {
+                this.eat();
+                this.think();
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    abstract public void eat() throws InterruptedException;
+}
