@@ -409,73 +409,25 @@ class Philosopher5 implements Runnable {
 }
 
 class Mediator6 {
-    private final List<Philosopher6> philosophers;
-    private Philosopher6 haltedPhilosopher;
+    private final int philosophersCnt;
+    private final Semaphore canteen;
 
-    Mediator6(List<Philosopher6> philosophers) {
-        this.philosophers = philosophers;
-
-        Philosopher6 philosopherToHalt = philosophers.getLast();
-        philosopherToHalt.halt();
-
-        this.haltedPhilosopher = philosopherToHalt;
-    }
-
-    public void notifyForkRelease(Philosopher6 prevHaltedPhilosopher) {
-        Philosopher6 philosopherToHalt = null;
-        while (philosopherToHalt == null) {
-            for (var philosopher : this.philosophers) {
-                synchronized (prevHaltedPhilosopher) {
-                    synchronized (philosopher) {
-                        if (philosopher == prevHaltedPhilosopher)
-                            continue;
-
-                        if (!this.haltedPhilosopher.holdsFork() && !philosopher.holdsFork()) {
-                            philosopherToHalt = philosopher;
-                            philosopherToHalt.halt();
-                            this.haltedPhilosopher.awake();
-                            this.haltedPhilosopher = philosopherToHalt;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+    Mediator6(int philosophersCnt) {
+        this.philosophersCnt = philosophersCnt;
+        this.canteen = new Semaphore(this.philosophersCnt - 1);
     }
 }
 
 class Philosopher6 implements Runnable {
-    public static final int SLEEP_TIME = 500;
     protected final Random random = new Random();
     protected final int id;
     protected final List<Lock> forks;
-    protected Mediator6 mediator;
-    private boolean isHalted = false;
-    private boolean holdsFork = false;
+    protected final Semaphore canteen;
 
-    Philosopher6(int id, List<Lock> forks) {
+    Philosopher6(int id, List<Lock> forks, Semaphore canteen) {
         this.id = id;
         this.forks = forks;
-    }
-
-    public void setMediator(Mediator6 mediator) {
-        this.mediator = mediator;
-    }
-
-    synchronized public void awake() {
-        this.isHalted = false;
-
-        System.out.println(String.format("Philosopher %d goes back to canteen", this.id));
-    }
-
-    public void halt() {
-        this.isHalted = true;
-
-        System.out.println(String.format("Philosopher %d leaves canteen", this.id));
-    }
-
-    public boolean holdsFork() {
-        return this.holdsFork;
+        this.canteen = canteen;
     }
 
     protected void think() throws InterruptedException {
@@ -484,16 +436,19 @@ class Philosopher6 implements Runnable {
         System.out.println(String.format("Philosopher %d stops thinking...", this.id));
     }
 
-    // v1: use left fork first
+    // v6: eat in corridor if there is no space for current philosopher in the canteen
     public void eat() throws InterruptedException {
         // use left fork first
         Lock firstFork = this.forks.get(this.id);
         Lock secondFork = this.forks.get((this.id + 1) % this.forks.size());
         String firstForkString = "left";
         String secondForkString = "right";
+        String eatsIn = "canteen";
 
-        // try to take right fork first
-        if (this.isHalted) {
+        // try to acquire access to canteen
+        boolean eatsInCanteen = this.canteen.tryAcquire();
+
+        if (!eatsInCanteen) {
             Lock tmp = firstFork;
             firstFork = secondFork;
             secondFork = tmp;
@@ -501,17 +456,16 @@ class Philosopher6 implements Runnable {
             String tmpStr = firstForkString;
             firstForkString = secondForkString;
             secondForkString = tmpStr;
+            eatsIn = "corridor";
         }
 
         firstFork.lock();
-        this.holdsFork = true;
         System.out.println(String.format("Philosopher %d takes %s fork", this.id, firstForkString));
 
         secondFork.lock();
-        this.holdsFork = false;
         System.out.println(String.format("Philosopher %d takes %s fork", this.id, secondForkString));
 
-        System.out.println(String.format("Philosopher %d eats...", this.id));
+        System.out.println(String.format("Philosopher %d eats in %s...", this.id, eatsIn));
 
         Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
 
@@ -520,10 +474,8 @@ class Philosopher6 implements Runnable {
         firstFork.unlock();
         secondFork.unlock();
 
-        this.holdsFork = false;
-
-        if (this.isHalted) {
-            this.mediator.notifyForkRelease(this);
+        if (eatsInCanteen) {
+            this.canteen.release();
         }
     }
 
@@ -643,6 +595,7 @@ public class Main {
     public static void main(String[] args) {
         int forkCount = 5;
         List<Lock> forks = new ArrayList<>(forkCount);
+        Semaphore canteen = new Semaphore(forkCount - 1);
 
         for (int i = 0; i < forkCount; i++) {
             forks.add(new ReentrantLock());
@@ -650,13 +603,10 @@ public class Main {
 
         List<Philosopher6> philosophers = new ArrayList<>(forkCount);
         for (int i = 0; i < forkCount; i++) {
-            philosophers.add(new Philosopher6(i, forks));
+            philosophers.add(new Philosopher6(i, forks, canteen));
         }
 
-        Mediator6 mediator = new Mediator6(philosophers);
-
         for (Philosopher6 philosopher : philosophers) {
-            philosopher.setMediator(mediator);
             new Thread(philosopher).start();
         }
     }
