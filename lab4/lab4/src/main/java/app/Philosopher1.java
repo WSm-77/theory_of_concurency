@@ -5,6 +5,8 @@ import java.util.List;
 // v1: use left fork first
 public class Philosopher1 extends AbstractPhilosopher {
     private final List<Fork> forks;
+    private Fork leftFork;
+    private Fork rightFork;
 
     Philosopher1(int id, List<Fork> forks) {
         super(id);
@@ -12,9 +14,9 @@ public class Philosopher1 extends AbstractPhilosopher {
     }
 
     @Override
-    public void eat() throws InterruptedException {
+    public void acquireForks() throws InterruptedException {
         // use left fork first
-        Fork leftFork = this.forks.get(this.id);
+        this.leftFork = this.forks.get(this.id);
 
         synchronized (leftFork) {
             while (leftFork.isUsed()) {
@@ -26,7 +28,7 @@ public class Philosopher1 extends AbstractPhilosopher {
             leftFork.notifyAll();
         }
 
-        Fork rightFork = this.forks.get((this.id + 1) % this.forks.size());
+        this.rightFork = this.forks.get((this.id + 1) % this.forks.size());
 
         synchronized (rightFork) {
             while (rightFork.isUsed()) {
@@ -37,12 +39,10 @@ public class Philosopher1 extends AbstractPhilosopher {
             rightFork.use();
             rightFork.notifyAll();
         }
+    }
 
-        // eating process...
-        System.out.println(String.format("Philosopher %d is eating...", this.id));
-        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
-        System.out.println(String.format("Philosopher %d stops eating and releases forks", this.id));
-
+    @Override
+    public void releaseForks() throws InterruptedException {
         synchronized (leftFork) {
             leftFork.release();
             leftFork.notifyAll();

@@ -1,7 +1,6 @@
 package app;
 
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
 
@@ -9,6 +8,9 @@ import java.util.concurrent.locks.Lock;
 public class Philosopher6 extends AbstractPhilosopher {
     protected final List<Lock> forks;
     protected final Semaphore canteen;
+    private Lock firstFork;
+    private Lock secondFork;
+    private boolean eatsInCanteen = false;
 
     Philosopher6(int id, List<Lock> forks, Semaphore canteen) {
         super(id);
@@ -17,16 +19,16 @@ public class Philosopher6 extends AbstractPhilosopher {
     }
 
     @Override
-    public void eat() throws InterruptedException {
+    public void acquireForks() throws InterruptedException {
         // use left fork first
-        Lock firstFork = this.forks.get(this.id);
-        Lock secondFork = this.forks.get((this.id + 1) % this.forks.size());
+        firstFork = this.forks.get(this.id);
+        secondFork = this.forks.get((this.id + 1) % this.forks.size());
         String firstForkString = "left";
         String secondForkString = "right";
         String eatsIn = "canteen";
 
         // try to acquire access to canteen
-        boolean eatsInCanteen = this.canteen.tryAcquire();
+        eatsInCanteen = this.canteen.tryAcquire();
 
         if (!eatsInCanteen) {
             Lock tmp = firstFork;
@@ -44,13 +46,10 @@ public class Philosopher6 extends AbstractPhilosopher {
 
         secondFork.lock();
         System.out.println(String.format("Philosopher %d takes %s fork", this.id, secondForkString));
+    }
 
-        System.out.println(String.format("Philosopher %d eats in %s...", this.id, eatsIn));
-
-        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
-
-        System.out.println(String.format("Philosopher %d stops eating and releases forks", this.id));
-
+    @Override
+    public void releaseForks() throws InterruptedException {
         firstFork.unlock();
         secondFork.unlock();
 

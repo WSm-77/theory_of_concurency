@@ -18,6 +18,13 @@ abstract public class AbstractPhilosopher implements Runnable {
         System.out.println(String.format("Philosopher %d stops thinking...", this.id));
     }
 
+    protected void eat() throws InterruptedException {
+        // eating process...
+        System.out.println(String.format("Philosopher %d is eating...", this.id));
+        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
+        System.out.println(String.format("Philosopher %d stops eating and releases forks", this.id));
+    }
+
     @Override
     public void run() {
         try {
@@ -25,7 +32,9 @@ abstract public class AbstractPhilosopher implements Runnable {
             Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
 
             for (int i = 0; i < 100; i++) {
+                this.acquireForks();
                 this.eat();
+                this.releaseForks();
                 this.think();
             }
         } catch (InterruptedException e) {
@@ -33,5 +42,6 @@ abstract public class AbstractPhilosopher implements Runnable {
         }
     }
 
-    abstract public void eat() throws InterruptedException;
+    abstract public void acquireForks() throws InterruptedException;
+    abstract public void releaseForks() throws InterruptedException;
 }

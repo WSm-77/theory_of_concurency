@@ -7,6 +7,8 @@ import java.util.concurrent.locks.Lock;
 // v2: use random fork first
 public class Philosopher2 extends AbstractPhilosopher {
     protected final List<Lock> forks;
+    private Lock firstFork;
+    private Lock secondFork;
 
     Philosopher2(int id, List<Lock> forks) {
         super(id);
@@ -14,9 +16,9 @@ public class Philosopher2 extends AbstractPhilosopher {
     }
 
     @Override
-    public void eat() throws InterruptedException {
-        Lock firstFork = this.forks.get(this.id);
-        Lock secondFork = this.forks.get((this.id + 1) % this.forks.size());
+    public void acquireForks() throws InterruptedException {
+        firstFork = this.forks.get(this.id);
+        secondFork = this.forks.get((this.id + 1) % this.forks.size());
 
         if (this.random.nextInt(2) == 0) {
             Lock tmpFork = firstFork;
@@ -29,11 +31,10 @@ public class Philosopher2 extends AbstractPhilosopher {
 
         secondFork.lock();
         System.out.println(String.format("Philosopher %d takes right fork", this.id));
+    }
 
-        System.out.println(String.format("Philosopher %d eats...", this.id));
-
-        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
-
+    @Override
+    public void releaseForks() throws InterruptedException {
         firstFork.unlock();
         secondFork.unlock();
 

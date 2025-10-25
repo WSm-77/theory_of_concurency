@@ -6,6 +6,8 @@ import java.util.concurrent.Semaphore;
 // v3: asymmetric solution
 public class Philosopher3 extends AbstractPhilosopher {
     protected final List<Semaphore> forks;
+    private Semaphore firstFork;
+    private Semaphore secondFork;
 
     Philosopher3(int id, List<Semaphore> forks) {
         super(id);
@@ -13,9 +15,9 @@ public class Philosopher3 extends AbstractPhilosopher {
     }
 
     @Override
-    public void eat() throws InterruptedException {
-        Semaphore firstFork = this.forks.get(this.id);
-        Semaphore secondFork = this.forks.get((this.id + 1) % this.forks.size());
+    public void acquireForks() throws InterruptedException {
+        firstFork = this.forks.get(this.id);
+        secondFork = this.forks.get((this.id + 1) % this.forks.size());
         String firstForkStr = "left";
         String secondForkStr = "right";
 
@@ -31,13 +33,10 @@ public class Philosopher3 extends AbstractPhilosopher {
 
         secondFork.acquire();
         System.out.println(String.format("Philosopher %d takes %s fork", this.id, secondForkStr));
+    }
 
-        System.out.println(String.format("Philosopher %d eats...", this.id));
-
-        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
-
-        System.out.println(String.format("Philosopher %d stops eating and releases forks", this.id));
-
+    @Override
+    public void releaseForks() {
         firstFork.release();
         secondFork.release();
     }
