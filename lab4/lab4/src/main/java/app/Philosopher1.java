@@ -2,12 +2,15 @@ package app;
 
 import java.util.List;
 
+// v1: use left fork first
 public class Philosopher1 extends AbstractPhilosopher {
+    private final List<Fork> forks;
+
     Philosopher1(int id, List<Fork> forks) {
-        super(id, forks);
+        super(id);
+        this.forks = forks;
     }
 
-    // v1: use left fork first
     @Override
     public void eat() throws InterruptedException {
         // use left fork first

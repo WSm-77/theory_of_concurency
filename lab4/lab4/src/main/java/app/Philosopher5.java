@@ -4,16 +4,14 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.locks.Lock;
 
-public class Philosopher5 implements Runnable {
-    public static final int SLEEP_TIME = 500;
-    protected final Random random = new Random();
-    protected final int id;
+// v5: solution with mediator
+public class Philosopher5 extends AbstractPhilosopher {
     protected final List<Lock> forks;
     protected Mediator5 mediator;
     private boolean isHalted = false;
 
     Philosopher5(int id, List<Lock> forks) {
-        this.id = id;
+        super(id);
         this.forks = forks;
     }
 
@@ -39,15 +37,8 @@ public class Philosopher5 implements Runnable {
         return this.isHalted;
     }
 
-    protected void think() throws InterruptedException {
-        System.out.println(String.format("Philosopher %d is thinking...", this.id));
-        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
-        System.out.println(String.format("Philosopher %d stops thinking...", this.id));
-    }
-
-    // v1: use left fork first
+    @Override
     public void eat() throws InterruptedException {
-        // use left fork first
         Lock firstFork = this.forks.get(this.id);
         Lock secondFork = this.forks.get((this.id + 1) % this.forks.size());
 
@@ -73,20 +64,5 @@ public class Philosopher5 implements Runnable {
         secondFork.unlock();
 
         this.mediator.notifyForkRelease(this);
-    }
-
-    @Override
-    public void run() {
-        try {
-            // start with random delay for each philosopher
-            Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
-
-            for (int i = 0; i < 100; i++) {
-                this.eat();
-                this.think();
-            }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

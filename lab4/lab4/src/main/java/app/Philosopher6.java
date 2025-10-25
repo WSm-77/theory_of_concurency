@@ -5,25 +5,18 @@ import java.util.Random;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
 
-public class Philosopher6 implements Runnable {
-    protected final Random random = new Random();
-    protected final int id;
+// v6: eat in corridor if there is no space for current philosopher in the canteen
+public class Philosopher6 extends AbstractPhilosopher {
     protected final List<Lock> forks;
     protected final Semaphore canteen;
 
     Philosopher6(int id, List<Lock> forks, Semaphore canteen) {
-        this.id = id;
+        super(id);
         this.forks = forks;
         this.canteen = canteen;
     }
 
-    protected void think() throws InterruptedException {
-        System.out.println(String.format("Philosopher %d is thinking...", this.id));
-        Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
-        System.out.println(String.format("Philosopher %d stops thinking...", this.id));
-    }
-
-    // v6: eat in corridor if there is no space for current philosopher in the canteen
+    @Override
     public void eat() throws InterruptedException {
         // use left fork first
         Lock firstFork = this.forks.get(this.id);
@@ -63,21 +56,6 @@ public class Philosopher6 implements Runnable {
 
         if (eatsInCanteen) {
             this.canteen.release();
-        }
-    }
-
-    @Override
-    public void run() {
-        try {
-            // start with random delay for each philosopher
-            Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
-
-            for (int i = 0; i < 100; i++) {
-                this.eat();
-                this.think();
-            }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
         }
     }
 }

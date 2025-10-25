@@ -7,11 +7,9 @@ abstract public class AbstractPhilosopher implements Runnable {
     public static final int SLEEP_TIME = 500;
     protected final Random random = new Random();
     protected final int id;
-    protected final List<Fork> forks;
 
-    AbstractPhilosopher(int id, List<Fork> forks) {
+    AbstractPhilosopher(int id) {
         this.id = id;
-        this.forks = forks;
     }
 
     protected void think() throws InterruptedException {
