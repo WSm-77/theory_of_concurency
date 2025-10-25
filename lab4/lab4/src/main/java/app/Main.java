@@ -410,7 +410,7 @@ class Philosopher5 implements Runnable {
 
 class Mediator6 {
     private final List<Philosopher6> philosophers;
-    private Philosopher6 haltedPhilosopher = null;
+    private Philosopher6 haltedPhilosopher;
 
     Mediator6(List<Philosopher6> philosophers) {
         this.philosophers = philosophers;
@@ -424,17 +424,19 @@ class Mediator6 {
     public void notifyForkRelease(Philosopher6 prevHaltedPhilosopher) {
         Philosopher6 philosopherToHalt = null;
         while (philosopherToHalt == null) {
-            synchronized (this.philosophers) {
-                for (var philosopher : this.philosophers) {
-                    if (philosopher == prevHaltedPhilosopher)
-                        continue;
+            for (var philosopher : this.philosophers) {
+                synchronized (prevHaltedPhilosopher) {
+                    synchronized (philosopher) {
+                        if (philosopher == prevHaltedPhilosopher)
+                            continue;
 
-                    if (!this.haltedPhilosopher.holdsFork() && !philosopher.holdsFork()) {
-                        philosopherToHalt = philosopher;
-                        philosopherToHalt.halt();
-                        this.haltedPhilosopher.awake();
-                        this.haltedPhilosopher = philosopherToHalt;
-                        break;
+                        if (!this.haltedPhilosopher.holdsFork() && !philosopher.holdsFork()) {
+                            philosopherToHalt = philosopher;
+                            philosopherToHalt.halt();
+                            this.haltedPhilosopher.awake();
+                            this.haltedPhilosopher = philosopherToHalt;
+                            break;
+                        }
                     }
                 }
             }
