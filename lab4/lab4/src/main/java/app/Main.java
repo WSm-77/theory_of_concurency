@@ -8,11 +8,11 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Main {
 
-    public static void execute(int sol, int forkCount) {
+    public static List<Double> execute(int sol, int forkCount) {
         System.out.println("Sol: " + sol);
+        List<Double> meanExecutionTimes;
 
         try (ExecutorService executor = Executors.newFixedThreadPool(6)) {
-            List<Double> meanExecutionTimes;
             List<Future<Double>> meanExecutionTimeFutures = new ArrayList<>();
 
             switch (sol) {
@@ -120,11 +120,12 @@ public class Main {
                     System.err.println("Unknown solution number: " + sol + " (expected 1..6)");
                     throw new RuntimeException("Unknown solution number: " + sol + " (expected 1..6)");
             }
-
-            meanExecutionTimes.forEach((time) -> System.out.printf("Executing %f ms.\n", time / 1_000_000.0));
         } catch (Exception e) {
             System.out.println(e.getMessage());
+            throw new RuntimeException(e);
         }
+
+        return meanExecutionTimes;
     }
 
     public static List<Double> getMeanExecutionTime(List<AbstractPhilosopher> philosophers, ExecutorService executor) throws ExecutionException, InterruptedException {
@@ -144,15 +145,17 @@ public class Main {
 
     public static void main(String[] args) {
         // Choose which solution to run (1..6)
-        final int forkCount = 5;
+        final int forkCount = 100;
+        final List<Integer> solutionsWithoutDeadlock = List.of(2, 3, 4, 5, 6);
 
-        {
-            final int sol = 5; // change this value to run different variants
-            Main.execute(sol, forkCount);
-        }
-
-//        for (int sol = 1; sol <= 6; sol++) {
+//        {
+//            final int sol = 5; // change this value to run different variants
 //            Main.execute(sol, forkCount);
 //        }
+
+        for (int sol : solutionsWithoutDeadlock) {
+            List<Double> meanExecutionTimes = Main.execute(sol, forkCount);
+            meanExecutionTimes.forEach((time) -> System.out.printf("Executing %f ms.\n", time / 1_000_000.0));
+        }
     }
 }
