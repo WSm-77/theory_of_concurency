@@ -147,16 +147,11 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        // Choose which solution to run (1..6)
-        final int forkCount = 100;
+        // set number of philosophers/forks here
+        final int forkCount = 150;
+
         final List<Integer> solutionsWithoutDeadlock = List.of(2, 3, 4, 5, 6);
 
-//        {
-//            final int sol = 5; // change this value to run different variants
-//            Main.execute(sol, forkCount);
-//        }
-
-        // Collect results per solution
         Map<Integer, List<Double>> resultsPerSolution = new LinkedHashMap<>();
 
         for (int sol : solutionsWithoutDeadlock) {
@@ -176,33 +171,28 @@ public class Main {
         }
     }
 
-    /**
-     * Save combined results into a single CSV file where each column is a solution (header = solution number)
-     * and each row contains the measurement for philosopher index i across solutions.
-     */
     private static void saveCombinedCsv(List<Integer> solutions, Map<Integer, List<Double>> resultsPerSolution, String fileName) throws IOException {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(fileName))) {
-            // header: index,sol1,sol2,... (use solution numbers as headers)
+            // header: index,sol1,sol2,...
             StringBuilder header = new StringBuilder();
             header.append("philosopher_index");
+
             for (int sol : solutions) {
-                header.append(",").append(sol);
+                header.append(",").append(String.format("sol%d", sol));
             }
+
             header.append("\n");
             bw.write(header.toString());
 
-            // determine number of rows (assume equal lengths; use max length defensively)
-            int maxRows = 0;
-            for (int sol : solutions) {
-                List<Double> list = resultsPerSolution.get(sol);
-                if (list != null && list.size() > maxRows) {
-                    maxRows = list.size();
-                }
-            }
+            int maxRows = resultsPerSolution.values().stream()
+                    .mapToInt(List::size)
+                    .max()
+                    .orElse(0);
 
             for (int i = 0; i < maxRows; i++) {
                 StringBuilder row = new StringBuilder();
                 row.append(i);
+
                 for (int sol : solutions) {
                     List<Double> list = resultsPerSolution.get(sol);
                     row.append(",");
@@ -212,6 +202,7 @@ public class Main {
                         row.append("");
                     }
                 }
+
                 row.append("\n");
                 bw.write(row.toString());
             }
