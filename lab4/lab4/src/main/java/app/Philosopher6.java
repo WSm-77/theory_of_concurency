@@ -42,10 +42,10 @@ public class Philosopher6 extends AbstractPhilosopher {
         }
 
         firstFork.lock();
-        System.out.println(String.format("Philosopher %d takes %s fork", this.id, firstForkString));
+//        System.out.println(String.format("Philosopher %d takes %s fork", this.id, firstForkString));
 
         secondFork.lock();
-        System.out.println(String.format("Philosopher %d takes %s fork", this.id, secondForkString));
+//        System.out.println(String.format("Philosopher %d takes %s fork", this.id, secondForkString));
     }
 
     @Override

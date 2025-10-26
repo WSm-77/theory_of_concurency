@@ -26,10 +26,10 @@ public class Philosopher2 extends AbstractPhilosopher {
         }
 
         firstFork.lock();
-        System.out.println(String.format("Philosopher %d takes left fork", this.id));
+//        System.out.println(String.format("Philosopher %d takes left fork", this.id));
 
         secondFork.lock();
-        System.out.println(String.format("Philosopher %d takes right fork", this.id));
+//        System.out.println(String.format("Philosopher %d takes right fork", this.id));
     }
 
     @Override
@@ -37,6 +37,6 @@ public class Philosopher2 extends AbstractPhilosopher {
         firstFork.unlock();
         secondFork.unlock();
 
-        System.out.println(String.format("Philosopher %d stops eating and releases forks", this.id));
+//        System.out.println(String.format("Philosopher %d stops eating and releases forks", this.id));
     }
 }

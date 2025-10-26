@@ -148,26 +148,34 @@ public class Main {
 
     public static void main(String[] args) {
         // set number of philosophers/forks here
-        final int forkCount = 150;
+//        final int forkCount = 150;
+//        final List<Integer> forkCounts = List.of(100, 200, 300);
+        final List<Integer> forkCounts = List.of(5, 10, 20);
 
         final List<Integer> solutionsWithoutDeadlock = List.of(2, 3, 4, 5, 6);
 
         Map<Integer, List<Double>> resultsPerSolution = new LinkedHashMap<>();
 
-        for (int sol : solutionsWithoutDeadlock) {
-            List<Double> meanExecutionTimes = Main.execute(sol, forkCount);
+        for (int version = 1; version <= 4; version++) {
+            for (Integer forkCount : forkCounts) {
+                for (int sol : solutionsWithoutDeadlock) {
+                    List<Double> meanExecutionTimes = Main.execute(sol, forkCount);
 
-            meanExecutionTimes.forEach((time) -> System.out.printf("Executing %f ms.\n", time));
+                    meanExecutionTimes.forEach((time) -> System.out.printf("Executing %f ms.\n", time));
 
-            resultsPerSolution.put(sol, meanExecutionTimes);
-        }
+                    resultsPerSolution.put(sol, meanExecutionTimes);
+                }
 
-        // Save combined CSV: columns = solutions (header = solution numbers), rows = measurements per philosopher
-        try {
-            saveCombinedCsv(new ArrayList<>(resultsPerSolution.keySet()), resultsPerSolution, "results_combined.csv");
-            System.out.println("Saved combined results to results_combined.csv");
-        } catch (IOException e) {
-            System.err.println("Failed to save combined CSV: " + e.getMessage());
+                // Save combined CSV: columns = solutions (header = solution numbers), rows = measurements per philosopher
+                String fileName = String.format("results_%d_forks_v%d.csv", forkCount, version);
+
+                try {
+                    saveCombinedCsv(new ArrayList<>(resultsPerSolution.keySet()), resultsPerSolution, fileName);
+                    System.out.println("Saved combined results to results_combined.csv");
+                } catch (IOException e) {
+                    System.err.println("Failed to save combined CSV: " + e.getMessage());
+                }
+            }
         }
     }
 

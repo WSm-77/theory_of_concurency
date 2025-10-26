@@ -23,7 +23,7 @@ public class Philosopher1 extends AbstractPhilosopher {
                 leftFork.wait();
             }
 
-            System.out.println(String.format("Philosopher %d takes left fork", this.id));
+//            System.out.println(String.format("Philosopher %d takes left fork", this.id));
             leftFork.use();
             leftFork.notifyAll();
         }
@@ -35,7 +35,7 @@ public class Philosopher1 extends AbstractPhilosopher {
                 rightFork.wait();
             }
 
-            System.out.println(String.format("Philosopher %d takes right fork", this.id));
+//            System.out.println(String.format("Philosopher %d takes right fork", this.id));
             rightFork.use();
             rightFork.notifyAll();
         }
