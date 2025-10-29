@@ -6,65 +6,75 @@ public class SyncList {
     public ListElem guardian = new ListElem();
 
     public boolean contains(Object value) {
-        ListElem head = this.guardian;
+        ListElem current = this.guardian;
 
-        Lock headReadLock = head.lock.readLock();
-        headReadLock.lock();
+        Lock currentReadLock =  current.lock.readLock();
 
-        while (head.next != null) {
-            ListElem next = head.next;
+        try {
+            // lock current element
+            currentReadLock.lock();
 
-            Lock nextReadLock = next.lock.readLock();
-            nextReadLock.lock();
+            while (current.next != null) {
+                ListElem next = current.next;
 
-            headReadLock.unlock();
+                Lock nextReadLock = next.lock.readLock();
 
-            if (next.value.equals(value)) {
-                nextReadLock.unlock();
-                return true;
+                // lock next element
+                nextReadLock.lock();
+
+                // unlock previous element
+                currentReadLock.unlock();
+                currentReadLock = nextReadLock;
+
+                if (next.value.equals(value)) {
+                    return true;
+                }
+
+                current = next;
+                currentReadLock = current.lock.readLock();
             }
-
-            head = next;
         }
-
-        headReadLock.unlock();
+        finally {
+            currentReadLock.unlock();
+        }
 
         return false;
     }
 
     public void add(Object value) {
-        ListElem head = this.guardian;
+        ListElem current = this.guardian;
 
-        Lock headReadLock =  head.lock.readLock();
-        Lock prevLock = headReadLock;
+        Lock currentReadLock =  current.lock.readLock();
+//        Lock prevLock = currentReadLock;
 
         try {
             // lock current element
-            prevLock.lock();
+            currentReadLock.lock();
 
-            while (head.next != null) {
-                ListElem next = head.next;
+            while (current.next != null) {
+                ListElem next = current.next;
 
                 Lock nextReadLock = next.lock.readLock();
 
-                // lock current element
+                // lock next element
                 nextReadLock.lock();
 
                 // unlock previous element
-                prevLock.unlock();
-                prevLock = head.lock.readLock();
+                currentReadLock.unlock();
+                currentReadLock = nextReadLock;
 
-                head = next;
-                headReadLock = head.lock.readLock();
+                current = next;
+                currentReadLock = current.lock.readLock();
             }
         }
         finally {
-            headReadLock.unlock();
+            currentReadLock.unlock();
+            System.out.println("Val:  " + value + " added to list");
         }
 
-        Lock headWriteLock = head.lock.writeLock();
-        headWriteLock.lock();
-        head.next = new ListElem(value);
-        headWriteLock.unlock();
+        Lock currentWriteLock = current.lock.writeLock();
+        currentWriteLock.lock();
+        current.next = new ListElem(value);
+        currentWriteLock.unlock();
     }
 }
