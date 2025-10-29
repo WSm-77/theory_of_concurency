@@ -7,6 +7,10 @@ public class Main {
     public static void main(String[] args) throws InterruptedException {
         SyncList syncList = new SyncList();
 
+//        for (Integer i = 0; i < 10; i++) {
+//            syncList.add(i);
+//        }
+
         List<Thread> addingThreads = new ArrayList<>();
         List<Thread> containsThreads = new ArrayList<>();
 
@@ -28,17 +32,11 @@ public class Main {
 
         for (Thread thread : addingThreads) {
             thread.start();
-        }
-
-        for (Thread thread : containsThreads) {
-            thread.start();
-        }
-
-        for (Thread thread : addingThreads) {
             thread.join();
         }
 
         for (Thread thread : containsThreads) {
+            thread.start();
             thread.join();
         }
 
