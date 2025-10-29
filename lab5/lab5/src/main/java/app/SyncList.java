@@ -77,4 +77,57 @@ public class SyncList {
         current.next = new ListElem(value);
         currentWriteLock.unlock();
     }
+
+    public boolean remove(Object value) {
+        ListElem current = this.guardian;
+
+        Lock currentReadLock =  current.lock.readLock();
+
+        try {
+            // lock current element
+            currentReadLock.lock();
+
+            while (current.next != null) {
+                ListElem next = current.next;
+
+                Lock nextReadLock = next.lock.readLock();
+
+                // lock next element
+                nextReadLock.lock();
+
+                if (next.value.equals(value)) {
+                    ListElem nextNext = next.next;
+
+                    Lock nextNextReadLock = null;
+
+                    if (nextNext != null) {
+                        nextNextReadLock = nextNext.lock.readLock();
+                        nextNextReadLock.lock();
+                    }
+
+                    currentReadLock.unlock();
+                    current.lock.writeLock().lock();
+                    current.next = nextNext;
+                    current.lock.writeLock().unlock();
+
+                    if (nextNext != null) {
+                        nextNextReadLock.unlock();
+                    }
+
+                    return true;
+                }
+
+                // unlock previous element
+                currentReadLock.unlock();
+                currentReadLock = nextReadLock;
+
+                current = next;
+                currentReadLock = current.lock.readLock();
+            }
+        }
+        finally {}
+//        currentReadLock.unlock();
+
+        return false;
+    }
 }
