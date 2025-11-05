@@ -1,9 +1,20 @@
 import os
+import sys
 from typing import Dict, List
 from task.task import Task
 from input_parser.input_parser import parse_input
 from collections import deque
 from visualization.plot_graph import plot_graph
+from utils.topo_sort import topological_sort
+
+def parse_args():
+    if len(sys.argv) == 1:
+        example_path = os.path.join(os.path.dirname(__file__), "examples", "example1.json")
+        return example_path
+    if len(sys.argv) != 2:
+        print("Usage: python main.py <input_file_path>")
+        sys.exit(1)
+    return sys.argv[1]
 
 def create_dependency_graph(alphabet: List[str], tasks: List[Task]):
     dependency_graph = {symbol: set() for symbol in alphabet}
@@ -60,25 +71,69 @@ def create_diekert_graph(word: str, alphabet: List[str], tasks: List[Task]) -> D
 
     return diekert_graph
 
+def foata_normal_form(word: str, alphabet: List[str], tasks: List[Task]) -> List[set]:
+    diekert_graph = create_diekert_graph(word, alphabet, tasks)
+    dependency_graph = create_dependency_graph(alphabet, tasks)
+
+    topo_sorted = topological_sort(diekert_graph)
+
+    foata_forms = []
+
+    current_form: set = {topo_sorted[0]}
+
+    i = 1
+
+    while i < len(word):
+        curr_elem = topo_sorted[i]
+
+        # check if curr_elem is independent with all elements in current_form
+        if not {elem for elem in current_form if word[curr_elem] in dependency_graph[word[elem]]}:
+            current_form.add(curr_elem)
+        else:
+            foata_forms.append(current_form)
+            current_form = {curr_elem}
+
+        i += 1
+
+    foata_forms.append(current_form)
+
+    return foata_forms
+
+def print_relation_graph(graph: Dict[str, set], relation: str) -> None:
+    output = f"{relation} = "
+    relations = []
+
+    for vertex in graph:
+        for neighbour in graph[vertex]:
+            relations.append(f"({vertex}, {neighbour})")
+
+    output += f"{{{', '.join(relations)}}}"
+
+    print(output)
+
+def print_foata_forms(foata_forms: List[set], word: str) -> None:
+    output = f"FNF([{word}]) = "
+
+    single_forms = list(map(lambda form: f"({''.join([word[idx] for idx in form])})", foata_forms))
+
+    output += "".join(single_forms)
+
+    print(output)
+
 if __name__ == "__main__":
-    example_path = os.path.join(os.path.dirname(__file__), "examples", "example1.json")
-    try:
-        alphabet, tasks, word = parse_input(example_path)
-        print(f"alphabet: {alphabet}")
-        print(f"tasks: {tasks}")
-        print(f"word: {word}")
-    except Exception as e:
-        print("Error parsing input:", e)
+    input_file = parse_args()
+
+    alphabet, tasks, word = parse_input(input_file)
 
     dependency_graph = create_dependency_graph(alphabet, tasks)
-    print(dependency_graph)
     independency_graph = create_independency_graph(dependency_graph)
-    print(independency_graph)
 
     word_graph = create_word_graph(word, alphabet, tasks)
-
-    print(word_graph)
     diekert_graph = create_diekert_graph(word, alphabet, tasks)
-    print(diekert_graph)
 
     plot_graph(diekert_graph, word)
+
+    foata_forms = foata_normal_form(word, alphabet, tasks)
+    print_relation_graph(dependency_graph, "D")
+    print_relation_graph(independency_graph, "I")
+    print_foata_forms(foata_forms, word)
