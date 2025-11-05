@@ -1,0 +1,22 @@
+{
+    "alphabet": ["a", "b", "c", "d"],
+    "tasks": {
+        "a": {
+            "variable": "x",
+            "new_value": "x + y"
+        },
+        "b": {
+            "variable": "y",
+            "new_value": "y + 2*z"
+        },
+        "c": {
+            "variable": "x",
+            "new_value": "3*x + z"
+        },
+        "d": {
+            "variable": "z",
+            "new_value": "y - z"
+        }
+    },
+    "word": "baadcb"
+}

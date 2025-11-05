@@ -1,0 +1,5 @@
+*.csv
+*.png
+**/*_cp/
+__pycache__/
+.venv/
