@@ -3,6 +3,7 @@ from typing import Dict, List
 from task.task import Task
 from input_parser.input_parser import parse_input
 from collections import deque
+from visualization.plot_graph import plot_graph
 
 def create_dependency_graph(alphabet: List[str], tasks: List[Task]):
     dependency_graph = {symbol: set() for symbol in alphabet}
@@ -79,3 +80,5 @@ if __name__ == "__main__":
     print(word_graph)
     diekert_graph = create_diekert_graph(word, alphabet, tasks)
     print(diekert_graph)
+
+    plot_graph(diekert_graph, word)
