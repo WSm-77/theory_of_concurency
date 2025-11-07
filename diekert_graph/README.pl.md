@@ -17,7 +17,7 @@ Inne istotne pliki:
 ## Wymagania
 
 - Python 3.9+ (używa nowoczesnych adnotacji typów jak `list[int]`)
-- narzędzi uv (do zarządzania środowiskiem i zależnościami)
+- narzędzie `uv` (do zarządzania środowiskiem i zależnościami)
 
 ## Konfiguracja środowiska
 
@@ -36,7 +36,7 @@ Program oczekuje pliku JSON z następującymi kluczami:
   - `task_id` — unikalny identyfikator zadania (typ string)
   - `variable` — zmienna, którą zadanie zapisuje/definiuje (typ string)
   - `new_value` — nowa wartość wyrażenia po wykonaniu zadania (typ string)
-- `word`: łańcuch złożony z symboli z `alphabet` reprezentujący cią zadań do wykonania, np. "abac"
+- `word`: łańcuch złożony z symboli z `alphabet` reprezentujący ciąg zadań do wykonania, np. "abac"
 
 Przykładowy plik JSON:
 
@@ -84,9 +84,9 @@ uv run main.py
 
 Program wykona kolejno:
 
-- parsowanie wejścia
-- budowę relacji zależności i niezależności
-- utworzenie grafu słowa oraz obliczenie grafu Diekerta
+- przeanalizuje wejście
+- zbuduje relacje zależności i niezależności
+- utworzy graf słowa oraz obliczy graf Diekerta
 - wygeneruje graf Diekerta do pliku `graph_<word>.png`
 - wypisze zbiory relacji i Postać Normalną Foaty na standardowe wyjście
 
@@ -114,7 +114,11 @@ dla każdego zadania a <- zbiór zadań:
         dodaj zależność między zadaniem a i zadaniem b
 ```
 
-Złożoność: O(n^2 * m), gdzie n to liczba zadań, a m to maksymalna długość wyrażeń `new_value` (sprawdzanie odczytu zmiennej).
+Złożoność: $O(n^2 \cdot m)$
+
+gdzie:
+
+n to liczba zadań, a m to maksymalna długość wyrażeń `new_value` (sprawdzanie odczytu zmiennej).
 
 ### 2) Graf niezależności (I)
 
@@ -131,17 +135,17 @@ Pseudokod:
 I = { (a,b) | a <- zbiór zadań, b <- zbiór zadań, (a,b) nie należy do D }
 ```
 
-Złożoność: O(n^2) sprawdzeń, każde sprawdzenie to odczyt z set-a O(1).
+Złożoność: $O(n^2)$, gdyż mamy $O(n^2)$ sprawdzeń, każde sprawdzenie to odczyt z set-a $O(1)$.
 
 ### 3) Graf słowa
 
 Zamysł:
 
-- Graf słowa modeluje ograniczenia porządkowe pomiędzy pozycjami słowa wejściowego. Wierzchołkami są indeksy (pozycje) w łańcuchu `word` (0..n-1). Istnieje skierowana krawędź z i do j (i < j) jeśli symbol na pozycji j jest zależny z symbolem na pozycji i.
+- Graf słowa modeluje ograniczenia porządkowe pomiędzy pozycjami słowa wejściowego. Wierzchołkami są indeksy (pozycje) w łańcuchu `word` $(0 \dotso n-1)$. Istnieje skierowana krawędź z $i$ do $j$ $(i < j)$ jeśli symbol na pozycji $j$ jest zależny z symbolem na pozycji $i$.
 
 Implementacja (w `main.py`):
 
-- Konstruuje się `dependency_graph` pomiędzy symbolami (lub zadaniami). Dla wszystkich i < j, jeśli `word[j]` należy do `dependency_graph[word[i]]`, dodaje się krawędź i -> j w `word_graph`.
+- Konstruuje się `dependency_graph` pomiędzy symbolami (lub zadaniami). Dla wszystkich $i < j$, jeśli `word[j]` należy do `dependency_graph[word[i]]`, dodaje się krawędź $i \to j$ w `word_graph`.
 
 Pseudokod:
 
@@ -154,7 +158,7 @@ dla każdego indeksu i <- 0..n-1:
 
 Interpretacja: późniejsze wystąpienia zależne od wcześniejszych muszą następować po nich w każdej linearyzacji.
 
-Złożoność: O(n^2) sprawdzeń, każde sprawdzenie to odczyt z set-a O(1).
+Złożoność: $O(n^2)$, gdyż mamy $O(n^2)$ sprawdzeń, każde sprawdzenie to odczyt z set-a $O(1)$.
 
 ### 4) Graf Diekerta (redukcja przechodnia grafu słowa)
 
@@ -171,7 +175,7 @@ Pseudokod:
 
 ```
 dla v <- wszystkie wierzchołki w word_graph:
-  visited = {False for all nodes}
+  odwiedzone wierzchołki = {}
 
   queue = kolejka
   włóż do kolejki wszystkich bezpośrednich sąsiadów v
@@ -186,9 +190,9 @@ dla v <- wszystkie wierzchołki w word_graph:
   sąsiedzi v = { u | u <- sąsiedzi v, u nie został odwiedzony }
 ```
 
-Złożoność: dla każdego wierzchołka uruchamiamy BFS po osiągalnej podczęści grafu: w najgorszym przypadku O(n * (n + m)), gdzie n to długość słowa, a m to liczba krawędzi. Dla gęstych grafów może to dojść do O(n^3), choć zwykle wejścia są małe.
+Złożoność: dla każdego wierzchołka uruchamiamy BFS po osiągalnej podczęści grafu: w najgorszym przypadku $O(n \cdot (n + m))$, gdzie n to długość słowa, a m to liczba krawędzi.
 
-### 5) Normalna Forma Foaty (FNF)
+### 5) Postać Normalna Foaty (FNF)
 
 Zamysł:
 
@@ -222,13 +226,13 @@ dodaj obecną klasę do klas Faoty
 
 Wynikiem jest lista zbiorów indeksów; podczas wypisywania kod mapuje indeksy z powrotem na litery w wejściowym słowie.
 
-Złożoność: zdominowana przez sortowanie topologiczne i sprawdzenia niezależności; w praktyce O(n^2).
+Złożoność: zdominowana przez sortowanie topologiczne i sprawdzenia niezależności; w praktyce $O(n^2)$.
 
 ## Sortowanie topologiczne
 
 - `utils/topo_sort.py` implementuje standardowe sortowanie topologiczne oparte na DFS. Odwiedza każdy węzeł, rekurencyjnie odwiedza jego sąsiadów i umieszcza węzeł w tablicy wynikowej przy powrocie — daje to porządek topologiczny dla acyklicznych grafów skierowanych (takich jak np. graf Diekerta).
 
-Złożoność: O(V + E)
+Złożoność: $O(V + E)$
 
 ## Wyjście
 
@@ -277,4 +281,5 @@ digraph {
 ```
 
 5. Plik graficzny `graph_baadcb.png` zawierający wizualizację grafu Diekerta.
+
 ![Przykładowy graf Diekerta](resources/graph_baadcb.png)
