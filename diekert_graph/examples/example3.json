@@ -1,0 +1,30 @@
+{
+    "alphabet": ["a", "b", "c", "d", "e", "f"],
+    "tasks": {
+        "a": {
+            "variable": "x",
+            "new_value": "x + 1"
+        },
+        "b": {
+            "variable": "y",
+            "new_value": "y + 2z"
+        },
+        "c": {
+            "variable": "x",
+            "new_value": "3x + z"
+        },
+        "d": {
+            "variable": "w",
+            "new_value": "w + v"
+        },
+        "e": {
+            "variable": "z",
+            "new_value": "y - z"
+        },
+        "f": {
+            "variable": "v",
+            "new_value": "x + v"
+        }
+    },
+    "word": "acdcfbbe"
+}
