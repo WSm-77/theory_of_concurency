@@ -16,46 +16,94 @@ def parse_args():
         sys.exit(1)
     return sys.argv[1]
 
+# def create_tasks(n: int) -> Tuple[List[Task], List[Task], List[Task]]:
+#     # m_k,i = M_k,i / M_i,i
+#     a_tasks = []
+#     for i in range(n - 1):
+#         for k in range(i + 1, n):
+#             task_id = f"a_{k},{i}"
+#             variable = f"m_{k},{i}"
+#             uses = {f"M_{k},{i}", f"M_{i},{i}"}
+#             a_tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
+
+#     # n_k,i = M_i,j * m_k,i
+#     b_tasks = []
+#     for i in range(n - 1):
+#         for k in range(i + 1, n):
+#             for j in range(i, n):
+#                 task_id = f"b_{i},{j},{k}"
+#                 variable = f"n_{k},{i}"
+#                 uses = {f"M_{i},{j}", f"m_{k},{i}"}
+#                 b_tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
+
+#     # M_k,j = M_k,j * n_k,i
+#     c_tasks = []
+#     for i in range(n - 1):
+#         for k in range(i + 1, n):
+#             for j in range(i, n):
+#                 task_id = f"c_{i},{j},{k}"
+#                 variable = f"M_{k},{j}"
+#                 uses = {f"M_{k},{j}", f"n_{k},{i}"}
+#                 c_tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
+
+#     return a_tasks, b_tasks, c_tasks
+
 def create_tasks(n: int) -> Tuple[List[Task], List[Task], List[Task]]:
     # m_k,i = M_k,i / M_i,i
     a_tasks = []
+
+    # n_k,i = M_i,j * m_k,i
+    b_tasks = []
+
+    # M_k,j = M_k,j - n_k,i
+    c_tasks = []
+    tasks = []
     for i in range(n - 1):
         for k in range(i + 1, n):
             task_id = f"a_{k},{i}"
             variable = f"m_{k},{i}"
             uses = {f"M_{k},{i}", f"M_{i},{i}"}
             a_tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
-
-    # n_k,i = M_i,j * m_k,i
-    b_tasks = []
-    for i in range(n - 1):
-        for k in range(i + 1, n):
+            tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
+            tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
             for j in range(i, n):
                 task_id = f"b_{i},{j},{k}"
-                variable = f"n_{k},{i}"
+                variable = f"n_{i},{j},{k}"
                 uses = {f"M_{i},{j}", f"m_{k},{i}"}
                 b_tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
-
-    # M_k,j = M_k,j * n_k,i
-    c_tasks = []
-    for i in range(n - 1):
-        for k in range(i + 1, n):
+                tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
             for j in range(i, n):
                 task_id = f"c_{i},{j},{k}"
                 variable = f"M_{k},{j}"
-                uses = {f"M_{k},{j}", f"n_{k},{i}"}
+                uses = {f"M_{k},{j}", f"n_{i},{j},{k}"}
                 c_tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
+                tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
 
-    return a_tasks, b_tasks, c_tasks
 
+    return a_tasks, b_tasks, c_tasks, tasks
+
+
+# def create_dependency_graph(alphabet: List[str], tasks: List[Task]):
+#     dependency_graph = {symbol: set() for symbol in alphabet}
+
+#     for i, vertex in enumerate(tasks):
+#         for j in range(i - 1, -1, -1):
+#             neighbour = tasks[j]
+#             if neighbour.variable in vertex.uses:
+#                 # dependency_graph[vertex.task_id].add(neighbour.task_id)
+#                 dependency_graph[neighbour.task_id].add(vertex.task_id)
+#                 break
+
+#     return dependency_graph
 
 def create_dependency_graph(alphabet: List[str], tasks: List[Task]):
     dependency_graph = {symbol: set() for symbol in alphabet}
 
-    for vertex in tasks:
-        for neighbour in tasks:
-            if vertex.variable in neighbour.uses:
-                dependency_graph[vertex.task_id].add(neighbour.task_id)
+    for i, vertex in enumerate(tasks):
+        for j in range(i - 1, -1, -1):
+            neighbour = tasks[j]
+            if neighbour.variable in vertex.uses:
+                # dependency_graph[vertex.task_id].add(neighbour.task_id)
                 dependency_graph[neighbour.task_id].add(vertex.task_id)
 
     return dependency_graph
@@ -88,6 +136,7 @@ def create_diekert_graph(alphabet: List[str], tasks: List[Task]) -> Dict[int, se
     diekert_graph = {}
 
     for vertex in graph:
+        print(f"Processing vertex: {vertex}")
         visited = {v : False for v in graph}
 
         queue = deque(graph[vertex])
@@ -161,8 +210,8 @@ if __name__ == "__main__":
     print("Vector b:")
     print(b)
 
-    a_tasks, b_tasks, c_tasks = create_tasks(A.size(0))
-    tasks = a_tasks + b_tasks + c_tasks
+    a_tasks, b_tasks, c_tasks, tasks = create_tasks(A.size(0))
+    # tasks = a_tasks + b_tasks + c_tasks
     alphabet = [task.task_id for task in tasks]
 
     dependency_graph = create_dependency_graph(alphabet, tasks)
@@ -171,7 +220,7 @@ if __name__ == "__main__":
     # word_graph = create_word_graph(word, alphabet, tasks)
     # diekert_graph = create_diekert_graph(alphabet, tasks)
 
-    # plot_graph(diekert_graph, word)
+    plot_graph(dependency_graph, input_file.split("/")[-1].split(".")[0])
 
     # foata_forms = foata_normal_form(word, alphabet, tasks)
     print_relation_graph(dependency_graph, "D")
