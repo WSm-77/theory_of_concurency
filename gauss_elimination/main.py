@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from task.task import Task
 from input_parser.input_parser import parse_input
 from collections import deque
@@ -9,19 +9,52 @@ from utils.topo_sort import topological_sort
 
 def parse_args():
     if len(sys.argv) == 1:
-        example_path = os.path.join(os.path.dirname(__file__), "examples", "example1.json")
+        example_path = os.path.join(os.path.dirname(__file__), "examples", "example1.txt")
         return example_path
     if len(sys.argv) != 2:
         print("Usage: python main.py <input_file_path>")
         sys.exit(1)
     return sys.argv[1]
 
+def create_tasks(n: int) -> Tuple[List[Task], List[Task], List[Task]]:
+    # m_k,i = M_k,i / M_i,i
+    a_tasks = []
+    for i in range(n - 1):
+        for k in range(i + 1, n):
+            task_id = f"a_{k},{i}"
+            variable = f"m_{k},{i}"
+            uses = {f"M_{k},{i}", f"M_{i},{i}"}
+            a_tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
+
+    # n_k,i = M_i,j * m_k,i
+    b_tasks = []
+    for i in range(n - 1):
+        for k in range(i + 1, n):
+            for j in range(i, n):
+                task_id = f"b_{i},{j},{k}"
+                variable = f"n_{k},{i}"
+                uses = {f"M_{i},{j}", f"m_{k},{i}"}
+                b_tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
+
+    # M_k,j = M_k,j * n_k,i
+    c_tasks = []
+    for i in range(n - 1):
+        for k in range(i + 1, n):
+            for j in range(i, n):
+                task_id = f"c_{i},{j},{k}"
+                variable = f"M_{k},{j}"
+                uses = {f"M_{k},{j}", f"n_{k},{i}"}
+                c_tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
+
+    return a_tasks, b_tasks, c_tasks
+
+
 def create_dependency_graph(alphabet: List[str], tasks: List[Task]):
     dependency_graph = {symbol: set() for symbol in alphabet}
 
     for vertex in tasks:
         for neighbour in tasks:
-            if neighbour.variable in vertex.new_value:
+            if vertex.variable in neighbour.uses:
                 dependency_graph[vertex.task_id].add(neighbour.task_id)
                 dependency_graph[neighbour.task_id].add(vertex.task_id)
 
@@ -50,24 +83,23 @@ def create_word_graph(word: str, alphabet: List[str], tasks: List[Task]):
 
     return word_graph
 
-def create_diekert_graph(word: str, alphabet: List[str], tasks: List[Task]) -> Dict[int, set]:
-    word_graph = create_word_graph(word, alphabet, tasks)
-
+def create_diekert_graph(alphabet: List[str], tasks: List[Task]) -> Dict[int, set]:
+    graph = create_dependency_graph(alphabet, tasks)
     diekert_graph = {}
 
-    for vertex in word_graph:
-        visited = {v : False for v in word_graph}
+    for vertex in graph:
+        visited = {v : False for v in graph}
 
-        queue = deque(word_graph[vertex])
+        queue = deque(graph[vertex])
 
         while queue:
             curr = queue.popleft()
 
-            for neighbour in word_graph[curr]:
+            for neighbour in graph[curr]:
                 visited[neighbour] = True
                 queue.append(neighbour)
 
-        diekert_graph[vertex] = {neigh for neigh in word_graph[vertex] if not visited[neigh]}
+        diekert_graph[vertex] = {neigh for neigh in graph[vertex] if not visited[neigh]}
 
     return diekert_graph
 
@@ -123,17 +155,25 @@ def print_foata_forms(foata_forms: List[set], word: str) -> None:
 if __name__ == "__main__":
     input_file = parse_args()
 
-    alphabet, tasks, word = parse_input(input_file)
+    A, b = parse_input(input_file)
+    print("Matrix A:")
+    print(A)
+    print("Vector b:")
+    print(b)
+
+    a_tasks, b_tasks, c_tasks = create_tasks(A.size(0))
+    tasks = a_tasks + b_tasks + c_tasks
+    alphabet = [task.task_id for task in tasks]
 
     dependency_graph = create_dependency_graph(alphabet, tasks)
-    independency_graph = create_independency_graph(dependency_graph)
+    # independency_graph = create_independency_graph(dependency_graph)
 
-    word_graph = create_word_graph(word, alphabet, tasks)
-    diekert_graph = create_diekert_graph(word, alphabet, tasks)
+    # word_graph = create_word_graph(word, alphabet, tasks)
+    # diekert_graph = create_diekert_graph(alphabet, tasks)
 
-    plot_graph(diekert_graph, word)
+    # plot_graph(diekert_graph, word)
 
-    foata_forms = foata_normal_form(word, alphabet, tasks)
+    # foata_forms = foata_normal_form(word, alphabet, tasks)
     print_relation_graph(dependency_graph, "D")
-    print_relation_graph(independency_graph, "I")
-    print_foata_forms(foata_forms, word)
+    # print_relation_graph(independency_graph, "I")
+    # print_foata_forms(foata_forms, word)
