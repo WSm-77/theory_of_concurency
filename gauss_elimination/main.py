@@ -62,19 +62,19 @@ def create_tasks(n: int) -> Tuple[List[Task], List[Task], List[Task], List[Task]
         for k in range(i + 1, n):
             task_id = f"a_{i},{k}"
             variable = f"m_{i},{k}"
-            uses = {f"M_{i},{k}", f"M_{i},{i}"}
+            uses = {f"M_{i},{k},{i-1}", f"M_{i},{i},{i-1}"}
             a_tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
             tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
             for j in range(i, n):
                 task_id = f"b_{i},{j},{k}"
                 variable = f"n_{i},{j},{k}"
-                uses = {f"M_{i},{j}", f"m_{i},{k}"}
+                uses = {f"M_{i},{j},{i-1}", f"m_{i},{k}"}
                 b_tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
                 tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
             for j in range(i, n):
                 task_id = f"c_{i},{j},{k}"
-                variable = f"M_{k},{j}"
-                uses = {f"M_{k},{j}", f"n_{i},{j},{k}"}
+                variable = f"M_{k},{j},{i}"
+                uses = {f"M_{k},{j},{i-1}", f"n_{i},{j},{k}"}
                 c_tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
                 tasks.append(Task(task_id=task_id, variable=variable, uses=uses))
 
@@ -84,9 +84,8 @@ def create_tasks(n: int) -> Tuple[List[Task], List[Task], List[Task], List[Task]
 def create_dependency_graph(alphabet: List[str], tasks: List[Task]):
     dependency_graph = {symbol: set() for symbol in alphabet}
 
-    for i, vertex in enumerate(tasks):
-        for j in range(i - 1, -1, -1):
-            neighbour = tasks[j]
+    for vertex in tasks:
+        for neighbour in tasks:
             if neighbour.variable in vertex.uses:
                 dependency_graph[neighbour.task_id].add(vertex.task_id)
 
@@ -173,14 +172,14 @@ if __name__ == "__main__":
     print(b)
 
     a_tasks, b_tasks, c_tasks, tasks = create_tasks(A.size(0))
-    # tasks = a_tasks + b_tasks + c_tasks
+    tasks = a_tasks + b_tasks + c_tasks
     alphabet = [task.task_id for task in tasks]
     print(alphabet)
 
     dependency_graph = create_dependency_graph(alphabet, tasks)
     diekert_graph = create_diekert_graph(alphabet, tasks)
 
-    plot_graph(dependency_graph, input_file.split("/")[-1].split(".")[0])
+    plot_graph(diekert_graph, input_file.split("/")[-1].split(".")[0] + "_diekert")
 
     foata_forms = foata_normal_form(alphabet, tasks)
     print_relation_graph(dependency_graph, "D")
