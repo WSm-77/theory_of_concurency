@@ -19,25 +19,16 @@ def parse_args():
 
 def create_a_function(A, n_tensor, m_tensor, i, k):
     def task_function():
-        # print("Executing a_task_function for i:", i, "k:", k)
-        # print(f"A[{i}, {i}]:", A.__getitem__((i, i)))
-        # print(f"A[{k}, {i}]:", A.__getitem__((k, i)))
         m_tensor.__setitem__((k, i), A.__getitem__((k, i)) / A.__getitem__((i, i)))
     return task_function
 
 def create_b_function(A, n_tensor, m_tensor, i, j, k):
     def task_function():
-        # print("Executing b_task_function for i:", i, "j:", j, "k:", k)
-        # print(f"A[{i}, {j}]:", A.__getitem__((i, j)))
-        # print(f"m_tensor[{k}, {i}]:", m_tensor.__getitem__((k, i)))
         n_tensor.__setitem__((i, j, k), A.__getitem__((i, j)) * m_tensor.__getitem__((k, i)))
     return task_function
 
 def create_c_function(A, n_tensor, m_tensor, i, j, k):
     def task_function():
-        # print("Executing c_task_function for i:", i, "j:", j, "k:", k)
-        # print(f"A[{k}, {j}]:", A.__getitem__((k, j)))
-        # print(f"n_tensor[{i}, {j}, {k}]:", n_tensor.__getitem__((i, j, k)))
         A.__setitem__((k, j), A.__getitem__((k, j)) - n_tensor.__getitem__((i, j, k)))
     return task_function
 
@@ -61,7 +52,6 @@ def create_tasks(A: torch.Tensor, b: torch.Tensor, m_tensor: torch.Tensor, n_ten
                 task_id=task_id,
                 variable=variable,
                 uses=uses,
-                # func=lambda: m_tensor.__setitem__((k, i), A.__getitem__((k, i)) / A.__getitem__((i, i))),
                 func=create_a_function(A, n_tensor, m_tensor, i, k),
             )
             a_tasks.append(a_task)
@@ -73,7 +63,6 @@ def create_tasks(A: torch.Tensor, b: torch.Tensor, m_tensor: torch.Tensor, n_ten
                     task_id=task_id,
                     variable=variable,
                     uses=uses,
-                    # func=lambda: n_tensor.__setitem__((i, j, k), A.__getitem__((i, j)) * m_tensor.__getitem__((k, i)))
                     func=create_b_function(A, n_tensor, m_tensor, i, j, k)
                 )
                 b_tasks.append(b_task)
@@ -85,7 +74,6 @@ def create_tasks(A: torch.Tensor, b: torch.Tensor, m_tensor: torch.Tensor, n_ten
                     task_id=task_id,
                     variable=variable,
                     uses=uses,
-                    # func=lambda: A.__setitem__((k, j), A.__getitem__((k, j)) - n_tensor.__getitem__((i, j, k)))
                     func=create_c_function(A, n_tensor, m_tensor, i, j, k)
                 )
                 c_tasks.append(c_task)
@@ -153,7 +141,6 @@ def foata_normal_form(alphabet: List[str], tasks: List[Task]) -> List[set[Task]]
 
 def gauss_elimination(A: torch.Tensor, b: torch.Tensor) -> None:
     n = A.size(0)
-    # A_cp, b_cp = A.clone(), b.clone()
     A_aug = torch.hstack((A, b))
     n, m = A_aug.size()
 
@@ -165,41 +152,10 @@ def gauss_elimination(A: torch.Tensor, b: torch.Tensor) -> None:
 
     foata_forms: List[set[Task]] = foata_normal_form(alphabet, tasks)
 
-    for form in foata_forms:
-        # futures = [executor.submit(task.func) for task in form]
-        # concurrent.futures.wait(futures)
-        print(form)
-        for task in form:
-            print( "Executing task:", task.task_id)
-            task.func()
-            print("A_aug after task", task.task_id)
-            print(A_aug)
-            print("------")
-            # print("m_tensor after task", task.task_id)
-            # print(m_tensor)
-            # print("------")
-            # print("n_tensor after task", task.task_id)
-            # print(n_tensor)
-            # print("------")
-            # executor.map(lambda task: task.func(), form)
-    # with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-    #     for form in foata_forms:
-    #         # futures = [executor.submit(task.func) for task in form]
-    #         # concurrent.futures.wait(futures)
-    #         print(form)
-    #         for task in form:
-    #             print( "Executing task:", task.task_id)
-    #             task.func()
-    #             print("A_aug after task", task.task_id)
-    #             print(A_aug)
-    #             print("------")
-    #             print("m_tensor after task", task.task_id)
-    #             print(m_tensor)
-    #             print("------")
-    #             print("n_tensor after task", task.task_id)
-    #             print(n_tensor)
-    #             print("------")
-    #         # executor.map(lambda task: task.func(), form)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        for form in foata_forms:
+            futures = [executor.submit(task.func) for task in form]
+            concurrent.futures.wait(futures)
 
     return A_aug[:, :-1], A_aug[:, -1]
 
@@ -217,7 +173,6 @@ def print_relation_graph(graph: Dict[Task, set[Task]], relation: str) -> None:
 
 def print_foata_forms(foata_forms: List[set[Task]], word: str) -> None:
     output = f"FNF([{word}]) = "
-    print(foata_forms)
 
     single_forms = list(map(lambda form: f"[{' | '.join(task.task_id for task in form)}]", foata_forms))
     output += "".join(single_forms)
@@ -233,20 +188,22 @@ if __name__ == "__main__":
     print("Vector b:")
     print(b)
 
+    a_tasks, b_tasks, c_tasks = create_tasks(torch.hstack((A, b)), b, None, None)
+    tasks = a_tasks + b_tasks + c_tasks
+    alphabet = [task.task_id for task in tasks]
+
+    dependency_graph = create_dependency_graph(alphabet, tasks)
+    diekert_graph = create_diekert_graph(alphabet, tasks)
+
+    plot_graph(diekert_graph, input_file.split("/")[-1].split(".")[0] + "_diekert")
+
+    foata_forms = foata_normal_form(alphabet, tasks)
+    print_relation_graph(dependency_graph, "D")
+    print_foata_forms(foata_forms, "; ".join(alphabet))
+
     A_cp, b_cp = gauss_elimination(A, b)
 
-    print(A_cp, b_cp)
-
-    # a_tasks, b_tasks, c_tasks = create_tasks(torch.hstack((A, b)), b, None, None)
-    # tasks = a_tasks + b_tasks + c_tasks
-    # alphabet = [task.task_id for task in tasks]
-    # print(alphabet)
-
-    # dependency_graph = create_dependency_graph(alphabet, tasks)
-    # diekert_graph = create_diekert_graph(alphabet, tasks)
-
-    # plot_graph(diekert_graph, input_file.split("/")[-1].split(".")[0] + "_diekert")
-
-    # foata_forms = foata_normal_form(alphabet, tasks)
-    # print_relation_graph(dependency_graph, "D")
-    # print_foata_forms(foata_forms, "; ".join(alphabet))
+    print("Resulting Matrix A after Gauss Elimination:")
+    print(A_cp)
+    print("Resulting Vector b after Gauss Elimination:")
+    print(b_cp)
