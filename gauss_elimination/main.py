@@ -32,8 +32,30 @@ def create_c_function(A, n_tensor, m_tensor, i, j, k):
         A.__setitem__((k, j), A.__getitem__((k, j)) - n_tensor.__getitem__((i, j, k)))
     return task_function
 
-def create_tasks(A: torch.Tensor, b: torch.Tensor, m_tensor: torch.Tensor, n_tensor: torch.Tensor) -> Tuple[List[Task], List[Task], List[Task]]:
+def create_d_function(A, q_tensor, i):
+    def task_function():
+        q_tensor.__setitem__(i, A.__getitem__((i, i)))
+    return task_function
+
+def create_e_function(A, q_tensor, i, j):
+    def task_function():
+        A.__setitem__((i,j), A.__getitem__((i, j)) / q_tensor.__getitem__(i))
+    return task_function
+
+def create_f_function(A, i, j, k):
+    def task_function():
+        A.__setitem__((k, j), A.__getitem__((k, j)) - A.__getitem__((i, j)))
+    return task_function
+
+def create_tasks(
+        A: torch.Tensor,
+        m_tensor: torch.Tensor,
+        n_tensor: torch.Tensor,
+        q_tensor: torch.Tensor,
+) -> Tuple[List[Task], List[Task], List[Task]]:
     n, m = A.size()
+
+    iteration = 0
 
     # m_k,i = M_k,i / M_i,i
     a_tasks = []
@@ -78,7 +100,64 @@ def create_tasks(A: torch.Tensor, b: torch.Tensor, m_tensor: torch.Tensor, n_ten
                 )
                 c_tasks.append(c_task)
 
-    return a_tasks, b_tasks, c_tasks
+        iteration += 1
+
+    # backward substitution tasks
+
+    # q_i = A[i,i]
+    d_tasks = []
+
+    # M_i,j = M_i,j / q_i
+    e_tasks = []
+
+    # M_k,j = M_k,j - M_i,j
+    f_tasks = []
+
+    for i in range(n-1, -1, -1):
+        d_task = Task(
+            task_id=f"d_{i}",
+            variable=f"q_{i}",
+            uses=frozenset({f"M_{i},{i},{iteration-1}"}),
+            func=create_d_function(A, q_tensor, i)
+        )
+        d_tasks.append(d_task)
+        for j in range(i+1, m):
+            e_task = Task(
+                task_id=f"e_{i},{j}",
+                variable=f"M_{i},{j},{iteration}",
+                uses=frozenset({f"M_{i},{j},{iteration-1}", f"q_{i}"}),
+                func=create_e_function(A, q_tensor, i, j)
+            )
+            e_tasks.append(e_task)
+        for j in [i, m-1]:
+            for k in range(i):
+                f_task = Task(
+                    task_id=f"f_{i},{j},{k}",
+                    variable=f"M_{k},{j},{iteration}",
+                    uses=frozenset({f"M_{i},{j},{iteration-1}", f"M_{k},{j},{iteration-1}"}),
+                    func=create_f_function(A, i, j, k)
+                )
+                f_tasks.append(f_task)
+
+        iteration += 1
+
+    # # M_k,j = M_k,j - M_i,j
+    # f_tasks = []
+    # for i in range(n-1, -1, -1):
+    #     for j in [i, m-1]:
+    #         for k in range(i):
+    #             f_task = Task(
+    #                 task_id=f"f_{i},{j},{k}",
+    #                 variable=f"M_{k},{j},{iteration}",
+    #                 uses=frozenset({f"M_{i},{j},{iteration-1}", f"M_{k},{j},{iteration-1}"}),
+    #                 func=create_f_function(A, i, j, k)
+    #             )
+    #             f_tasks.append(f_task)
+    #     iteration += 1
+
+    # print(f"ftasks length: {len(f_tasks)}")
+
+    return a_tasks, b_tasks, c_tasks, d_tasks, e_tasks, f_tasks
 
 def create_dependency_graph(alphabet: List[str], tasks: List[Task]):
     dependency_graph = {task: set() for task in tasks}
@@ -146,7 +225,8 @@ def gauss_elimination(A: torch.Tensor, b: torch.Tensor) -> None:
 
     m_tensor = torch.zeros((n, n)).float()
     n_tensor = torch.zeros((n, m, n)).float()
-    a_tasks, b_tasks, c_tasks = create_tasks(A_aug, A_aug[:, -1], m_tensor, n_tensor)
+    q_tensor = torch.zeros(n).float()
+    a_tasks, b_tasks, c_tasks = create_tasks(A_aug, m_tensor, n_tensor, q_tensor)
     tasks = a_tasks + b_tasks + c_tasks
     alphabet = [task.task_id for task in tasks]
 
@@ -188,22 +268,29 @@ if __name__ == "__main__":
     print("Vector b:")
     print(b)
 
-    a_tasks, b_tasks, c_tasks = create_tasks(torch.hstack((A, b)), b, None, None)
-    tasks = a_tasks + b_tasks + c_tasks
+    A_aug = torch.hstack((A, b))
+    n, m = A_aug.size()
+    m_tensor = torch.zeros((n, n)).float()
+    n_tensor = torch.zeros((n, m, n)).float()
+    q_tensor = torch.zeros(n).float()
+    a_tasks, b_tasks, c_tasks, d_tasks, e_tasks, f_tasks = create_tasks(A_aug, m_tensor, n_tensor, q_tensor)
+    tasks = a_tasks + b_tasks + c_tasks + d_tasks + e_tasks + f_tasks
     alphabet = [task.task_id for task in tasks]
 
     dependency_graph = create_dependency_graph(alphabet, tasks)
-    diekert_graph = create_diekert_graph(alphabet, tasks)
+    # diekert_graph = create_diekert_graph(alphabet, tasks)
+    print(dependency_graph)
 
-    plot_graph(diekert_graph, input_file.split("/")[-1].split(".")[0] + "_diekert")
+    plot_graph(dependency_graph, input_file.split("/")[-1].split(".")[0])
+    # plot_graph(diekert_graph, input_file.split("/")[-1].split(".")[0] + "_diekert")
 
-    foata_forms = foata_normal_form(alphabet, tasks)
-    print_relation_graph(dependency_graph, "D")
-    print_foata_forms(foata_forms, "; ".join(alphabet))
+    # foata_forms = foata_normal_form(alphabet, tasks)
+    # print_relation_graph(dependency_graph, "D")
+    # print_foata_forms(foata_forms, "; ".join(alphabet))
 
-    A_cp, b_cp = gauss_elimination(A, b)
+    # A_cp, b_cp = gauss_elimination(A, b)
 
-    print("Resulting Matrix A after Gauss Elimination:")
-    print(A_cp)
-    print("Resulting Vector b after Gauss Elimination:")
-    print(b_cp)
+    # print("Resulting Matrix A after Gauss Elimination:")
+    # print(A_cp)
+    # print("Resulting Vector b after Gauss Elimination:")
+    # print(b_cp)
