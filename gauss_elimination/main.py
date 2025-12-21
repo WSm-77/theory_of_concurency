@@ -10,7 +10,7 @@ import concurrent.futures
 
 def parse_args():
     if len(sys.argv) == 1:
-        example_path = os.path.join(os.path.dirname(__file__), "examples", "example2.txt")
+        example_path = os.path.join(os.path.dirname(__file__), "examples", "example1.txt")
         return example_path
     if len(sys.argv) != 2:
         print("Usage: python main.py <input_file_path>")
@@ -65,11 +65,13 @@ def create_tasks(
 
     # M_k,j = M_k,j - n_k,i
     c_tasks = []
+
+    tasks = []
     for i in range(n - 1):
         for k in range(i + 1, n):
             task_id = f"a_{i},{k}"
             variable = f"m_{i},{k}"
-            uses = frozenset({f"M_{i},{k},{i-1}", f"M_{i},{i},{i-1}"})
+            uses = frozenset({f"M_{k},{i}", f"M_{i},{i}"})
             a_task = Task(
                 task_id=task_id,
                 variable=variable,
@@ -77,10 +79,11 @@ def create_tasks(
                 func=create_a_function(A, n_tensor, m_tensor, i, k),
             )
             a_tasks.append(a_task)
+            tasks.append(a_task)
             for j in range(i, m):
                 task_id = f"b_{i},{j},{k}"
                 variable = f"n_{i},{j},{k}"
-                uses = frozenset({f"M_{i},{j},{i-1}", f"m_{i},{k}"})
+                uses = frozenset({f"M_{i},{j}", f"m_{i},{k}"})
                 b_task = Task(
                     task_id=task_id,
                     variable=variable,
@@ -88,10 +91,11 @@ def create_tasks(
                     func=create_b_function(A, n_tensor, m_tensor, i, j, k)
                 )
                 b_tasks.append(b_task)
+                tasks.append(b_task)
             for j in range(i, m):
                 task_id = f"c_{i},{j},{k}"
-                variable = f"M_{k},{j},{i}"
-                uses = frozenset({f"M_{k},{j},{i-1}", f"n_{i},{j},{k}"})
+                variable = f"M_{k},{j}"
+                uses = frozenset({f"M_{k},{j}", f"n_{i},{j},{k}"})
                 c_task = Task(
                     task_id=task_id,
                     variable=variable,
@@ -99,47 +103,48 @@ def create_tasks(
                     func=create_c_function(A, n_tensor, m_tensor, i, j, k)
                 )
                 c_tasks.append(c_task)
+                tasks.append(c_task)
 
         iteration += 1
 
     # backward substitution tasks
 
-    # q_i = A[i,i]
-    d_tasks = []
+    # # q_i = A[i,i]
+    # d_tasks = []
 
-    # M_i,j = M_i,j / q_i
-    e_tasks = []
+    # # M_i,j = M_i,j / q_i
+    # e_tasks = []
 
-    # M_k,j = M_k,j - M_i,j
-    f_tasks = []
+    # # M_k,j = M_k,j - M_i,j
+    # f_tasks = []
 
-    for i in range(n-1, -1, -1):
-        d_task = Task(
-            task_id=f"d_{i}",
-            variable=f"q_{i}",
-            uses=frozenset({f"M_{i},{i},{iteration-1}"}),
-            func=create_d_function(A, q_tensor, i)
-        )
-        d_tasks.append(d_task)
-        for j in range(i+1, m):
-            e_task = Task(
-                task_id=f"e_{i},{j}",
-                variable=f"M_{i},{j},{iteration}",
-                uses=frozenset({f"M_{i},{j},{iteration-1}", f"q_{i}"}),
-                func=create_e_function(A, q_tensor, i, j)
-            )
-            e_tasks.append(e_task)
-        for j in [i, m-1]:
-            for k in range(i):
-                f_task = Task(
-                    task_id=f"f_{i},{j},{k}",
-                    variable=f"M_{k},{j},{iteration}",
-                    uses=frozenset({f"M_{i},{j},{iteration-1}", f"M_{k},{j},{iteration-1}"}),
-                    func=create_f_function(A, i, j, k)
-                )
-                f_tasks.append(f_task)
+    # for i in range(n-1, -1, -1):
+    #     d_task = Task(
+    #         task_id=f"d_{i}",
+    #         variable=f"q_{i}",
+    #         uses=frozenset({f"M_{i},{i},{iteration-1}"}),
+    #         func=create_d_function(A, q_tensor, i)
+    #     )
+    #     d_tasks.append(d_task)
+    #     for j in range(i+1, m):
+    #         e_task = Task(
+    #             task_id=f"e_{i},{j}",
+    #             variable=f"M_{i},{j},{iteration}",
+    #             uses=frozenset({f"M_{i},{j},{iteration-1}", f"q_{i}"}),
+    #             func=create_e_function(A, q_tensor, i, j)
+    #         )
+    #         e_tasks.append(e_task)
+    #     for j in [i, m-1]:
+    #         for k in range(i):
+    #             f_task = Task(
+    #                 task_id=f"f_{i},{j},{k}",
+    #                 variable=f"M_{k},{j},{iteration}",
+    #                 uses=frozenset({f"M_{i},{j},{iteration-1}", f"M_{k},{j},{iteration-1}"}),
+    #                 func=create_f_function(A, i, j, k)
+    #             )
+    #             f_tasks.append(f_task)
 
-        iteration += 1
+    #     iteration += 1
 
     # # M_k,j = M_k,j - M_i,j
     # f_tasks = []
@@ -157,15 +162,19 @@ def create_tasks(
 
     # print(f"ftasks length: {len(f_tasks)}")
 
-    return a_tasks, b_tasks, c_tasks, d_tasks, e_tasks, f_tasks
+    # return a_tasks, b_tasks, c_tasks, d_tasks, e_tasks, f_tasks
+    return tasks
 
 def create_dependency_graph(alphabet: List[str], tasks: List[Task]):
     dependency_graph = {task: set() for task in tasks}
 
-    for vertex in tasks:
-        for neighbour in tasks:
-            if neighbour.variable in vertex.uses:
-                dependency_graph[neighbour].add(vertex)
+    for i, vertex in enumerate(tasks):
+        for used_variable in vertex.uses:
+            for j in range(i-1, -1, -1):
+                neighbour = tasks[j]
+                if neighbour.variable == used_variable:
+                    dependency_graph[neighbour].add(vertex)
+                    break
 
     return dependency_graph
 
@@ -226,8 +235,7 @@ def gauss_elimination(A: torch.Tensor, b: torch.Tensor) -> None:
     m_tensor = torch.zeros((n, n)).float()
     n_tensor = torch.zeros((n, m, n)).float()
     q_tensor = torch.zeros(n).float()
-    a_tasks, b_tasks, c_tasks = create_tasks(A_aug, m_tensor, n_tensor, q_tensor)
-    tasks = a_tasks + b_tasks + c_tasks
+    tasks = create_tasks(A_aug, m_tensor, n_tensor, q_tensor)
     alphabet = [task.task_id for task in tasks]
 
     foata_forms: List[set[Task]] = foata_normal_form(alphabet, tasks)
@@ -273,24 +281,23 @@ if __name__ == "__main__":
     m_tensor = torch.zeros((n, n)).float()
     n_tensor = torch.zeros((n, m, n)).float()
     q_tensor = torch.zeros(n).float()
-    a_tasks, b_tasks, c_tasks, d_tasks, e_tasks, f_tasks = create_tasks(A_aug, m_tensor, n_tensor, q_tensor)
-    tasks = a_tasks + b_tasks + c_tasks + d_tasks + e_tasks + f_tasks
+    tasks = create_tasks(A_aug, m_tensor, n_tensor, q_tensor)
     alphabet = [task.task_id for task in tasks]
 
     dependency_graph = create_dependency_graph(alphabet, tasks)
-    # diekert_graph = create_diekert_graph(alphabet, tasks)
+    diekert_graph = create_diekert_graph(alphabet, tasks)
     print(dependency_graph)
 
     plot_graph(dependency_graph, input_file.split("/")[-1].split(".")[0])
-    # plot_graph(diekert_graph, input_file.split("/")[-1].split(".")[0] + "_diekert")
+    plot_graph(diekert_graph, input_file.split("/")[-1].split(".")[0] + "_diekert")
 
     # foata_forms = foata_normal_form(alphabet, tasks)
     # print_relation_graph(dependency_graph, "D")
     # print_foata_forms(foata_forms, "; ".join(alphabet))
 
-    # A_cp, b_cp = gauss_elimination(A, b)
+    A_cp, b_cp = gauss_elimination(A, b)
 
-    # print("Resulting Matrix A after Gauss Elimination:")
-    # print(A_cp)
-    # print("Resulting Vector b after Gauss Elimination:")
-    # print(b_cp)
+    print("Resulting Matrix A after Gauss Elimination:")
+    print(A_cp)
+    print("Resulting Vector b after Gauss Elimination:")
+    print(b_cp)
