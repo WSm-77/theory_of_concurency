@@ -19,66 +19,42 @@ def parse_args():
 
 def create_a_function(A, n_tensor, m_tensor, i, k):
     def task_function():
-        print(f"Executing A function for i={i}, k={k}")
-        print(f"m_tensor before:\n{m_tensor}\n")
         m_tensor.__setitem__((k, i), A.__getitem__((k, i)) / A.__getitem__((i, i)))
-        print(f"m_tensor after:\n{m_tensor}\n")
     return task_function
 
 def create_b_function(A, n_tensor, m_tensor, i, j, k):
     def task_function():
-        print(f"Executing B function for i={i}, j={j}, k={k}")
-        print(f"n_tensor before:\n{n_tensor}\n")
         n_tensor.__setitem__((i, j, k), A.__getitem__((i, j)) * m_tensor.__getitem__((k, i)))
-        print(f"n_tensor after:\n{n_tensor}\n")
     return task_function
 
 def create_c_function(A, n_tensor, m_tensor, i, j, k):
     def task_function():
-        print(f"Executing C function for i={i}, j={j}, k={k}")
-        print(f"A before:\n{A}\n")
         A.__setitem__((k, j), A.__getitem__((k, j)) - n_tensor.__getitem__((i, j, k)))
-        print(f"A after:\n{A}\n")
     return task_function
 
 def create_d_function(A, q_tensor, i):
     def task_function():
-        print(f"Executing D function for i={i}")
-        print(f"q_tensor before:\n{q_tensor}\n")
         q_tensor.__setitem__(i, A.__getitem__((i, i)))
-        print(f"q_tensor after:\n{q_tensor}\n")
     return task_function
 
 def create_e_function(A, q_tensor, i, j):
     def task_function():
-        print(f"Executing E function for i={i}, j={j}")
-        print(f"A before:\n{A}\n")
         A.__setitem__((i,j), A.__getitem__((i, j)) / q_tensor.__getitem__(i))
-        print(f"A after:\n{A}\n")
     return task_function
 
 def create_f_function(A, r_tensor, i, k):
     def task_function():
-        print(f"Executing F function for i={i}, k={k}")
-        print(f"r_tensor before:\n{r_tensor}\n")
         r_tensor.__setitem__((i, k), A.__getitem__((k, i)) / A.__getitem__((i, i)))
-        print(f"r_tensor after:\n{r_tensor}\n")
     return task_function
 
 def create_g_function(A, r_tensor, s_tensor, i, j, k):
     def task_function():
-        print(f"Executing G function for i={i}, j={j}, k={k}")
-        print(f"s_tensor before:\n{s_tensor}\n")
         s_tensor.__setitem__((i, j, k), A.__getitem__((i, j)) * r_tensor.__getitem__((i, k)))
-        print(f"s_tensor after:\n{s_tensor}\n")
     return task_function
 
 def create_h_function(A, s_tensor, i, j, k):
     def task_function():
-        print(f"Executing H function for i={i}, j={j}, k={k}")
-        print(f"A before:\n{A}\n")
         A.__setitem__((k, j), A.__getitem__((k, j)) - s_tensor.__getitem__((i, j, k)))
-        print(f"A after:\n{A}\n")
     return task_function
 
 def create_tasks(
@@ -202,33 +178,6 @@ def create_tasks(
                 h_tasks.append(h_task)
                 tasks.append(h_task)
 
-    # normalization phase
-
-    # # q_i = M_i,i
-    # d_tasks = []
-
-    # # M_i,j = M_i,j / q_i
-    # e_tasks = []
-
-    # for i in range(n-1, -1, -1):
-    #     d_task = Task(
-    #         task_id=f"d_{i}",
-    #         variable=f"q_{i}",
-    #         uses=frozenset({f"M_{i},{i}"}),
-    #         func=create_d_function(A, q_tensor, i)
-    #     )
-    #     d_tasks.append(d_task)
-    #     tasks.append(d_task)
-    #     for j in range(i, m):
-    #         e_task = Task(
-    #             task_id=f"e_{i},{j}",
-    #             variable=f"M_{i},{j}",
-    #             uses=frozenset({f"M_{i},{j}", f"q_{i}"}),
-    #             func=create_e_function(A, q_tensor, i, j)
-    #         )
-    #         e_tasks.append(e_task)
-    #         tasks.append(e_task)
-
     return tasks
 
 def create_dependency_graph(alphabet: List[str], tasks: List[Task]):
@@ -308,18 +257,10 @@ def gauss_elimination(A: torch.Tensor, b: torch.Tensor) -> None:
 
     foata_forms: List[set[Task]] = foata_normal_form(alphabet, tasks)
 
-    # with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-        # for form in foata_forms:
-            # futures = [executor.submit(task.func) for task in form]
-            # concurrent.futures.wait(futures)
-
-    for form in foata_forms:
-        for task in form:
-            # print(f"Executing task: {task.task_id}")
-            # print(f"A_aug before:\n{A_aug}\n")
-            task.func()
-            # print(f"A_aug after:\n{A_aug}\n")
-            # print("-" * 40)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        for form in foata_forms:
+            futures = [executor.submit(task.func) for task in form]
+            concurrent.futures.wait(futures)
 
     return A_aug[:, :-1], A_aug[:, -1]
 
@@ -370,7 +311,7 @@ if __name__ == "__main__":
     plot_graph(diekert_graph, input_file.split("/")[-1].split(".")[0] + "_diekert")
 
     foata_forms = foata_normal_form(alphabet, tasks)
-    # print_relation_graph(dependency_graph, "D")
+    print_relation_graph(dependency_graph, "D")
     print_foata_forms(foata_forms, "; ".join(alphabet))
 
     A_cp, b_cp = gauss_elimination(A, b)
