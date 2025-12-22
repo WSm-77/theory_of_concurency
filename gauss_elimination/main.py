@@ -61,7 +61,7 @@ def create_f_function(A, r_tensor, i, k):
     def task_function():
         print(f"Executing F function for i={i}, k={k}")
         print(f"r_tensor before:\n{r_tensor}\n")
-        r_tensor.__setitem__((i, k), A.__getitem__((k, i)))
+        r_tensor.__setitem__((i, k), A.__getitem__((k, i)) / A.__getitem__((i, i)))
         print(f"r_tensor after:\n{r_tensor}\n")
     return task_function
 
@@ -100,8 +100,31 @@ def create_tasks(
     # M_k,j = M_k,j - n_k,i
     c_tasks = []
 
+    # q_i = M_i,i
+    d_tasks = []
+
+    # M_i,j = M_i,j / q_i
+    e_tasks = []
+
     tasks = []
-    for i in range(n - 1):
+    for i in range(n):
+        d_task = Task(
+            task_id=f"d_{i}",
+            variable=f"q_{i}",
+            uses=frozenset({f"M_{i},{i}"}),
+            func=create_d_function(A, q_tensor, i)
+        )
+        d_tasks.append(d_task)
+        tasks.append(d_task)
+        for j in range(i, m):
+            e_task = Task(
+                task_id=f"e_{i},{j}",
+                variable=f"M_{i},{j}",
+                uses=frozenset({f"M_{i},{j}", f"q_{i}"}),
+                func=create_e_function(A, q_tensor, i, j)
+            )
+            e_tasks.append(e_task)
+            tasks.append(e_task)
         for k in range(i + 1, n):
             task_id = f"a_{i},{k}"
             variable = f"m_{i},{k}"
@@ -139,33 +162,6 @@ def create_tasks(
                 c_tasks.append(c_task)
                 tasks.append(c_task)
 
-    # normalization phase
-
-    # q_i = M_i,i
-    d_tasks = []
-
-    # M_i,j = M_i,j / q_i
-    e_tasks = []
-
-    for i in range(n-1, -1, -1):
-        d_task = Task(
-            task_id=f"d_{i}",
-            variable=f"q_{i}",
-            uses=frozenset({f"M_{i},{i}"}),
-            func=create_d_function(A, q_tensor, i)
-        )
-        d_tasks.append(d_task)
-        tasks.append(d_task)
-        for j in range(i, m):
-            e_task = Task(
-                task_id=f"e_{i},{j}",
-                variable=f"M_{i},{j}",
-                uses=frozenset({f"M_{i},{j}", f"q_{i}"}),
-                func=create_e_function(A, q_tensor, i, j)
-            )
-            e_tasks.append(e_task)
-            tasks.append(e_task)
-
     # backward substitution phase
 
     # r_i,k = M_k,i
@@ -182,7 +178,7 @@ def create_tasks(
             f_task = Task(
                 task_id=f"f_{i},{k}",
                 variable=f"r_{i},{k}",
-                uses=frozenset({f"M_{k},{i}"}),
+                uses=frozenset({f"M_{k},{i}", f"M_{i},{i}"}),
                 func=create_f_function(A, r_tensor, i, k)
             )
             f_tasks.append(f_task)
@@ -205,6 +201,33 @@ def create_tasks(
                 )
                 h_tasks.append(h_task)
                 tasks.append(h_task)
+
+    # normalization phase
+
+    # # q_i = M_i,i
+    # d_tasks = []
+
+    # # M_i,j = M_i,j / q_i
+    # e_tasks = []
+
+    # for i in range(n-1, -1, -1):
+    #     d_task = Task(
+    #         task_id=f"d_{i}",
+    #         variable=f"q_{i}",
+    #         uses=frozenset({f"M_{i},{i}"}),
+    #         func=create_d_function(A, q_tensor, i)
+    #     )
+    #     d_tasks.append(d_task)
+    #     tasks.append(d_task)
+    #     for j in range(i, m):
+    #         e_task = Task(
+    #             task_id=f"e_{i},{j}",
+    #             variable=f"M_{i},{j}",
+    #             uses=frozenset({f"M_{i},{j}", f"q_{i}"}),
+    #             func=create_e_function(A, q_tensor, i, j)
+    #         )
+    #         e_tasks.append(e_task)
+    #         tasks.append(e_task)
 
     return tasks
 
