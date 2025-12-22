@@ -1,6 +1,6 @@
-from torch import Tensor, tensor
+import numpy as np
 
-def parse_input(file_path: str) -> Tensor:
+def parse_input(file_path: str) -> np.ndarray:
     """
     Parse the text input file and return a matrix A and vector b for Gauss Elimination.
 
@@ -13,7 +13,7 @@ def parse_input(file_path: str) -> Tensor:
         A = [list(map(float, file.readline().strip().split(' '))) for _ in range(n)]
         b = list(map(float, file.readline().strip().split(' ')))
 
-        A = tensor(A)
-        b = tensor(b).unsqueeze(1)  # Convert to column vector
+        A = np.array(A)
+        b = np.array(b).reshape(-1, 1)  # Convert to column vector
 
         return A, b

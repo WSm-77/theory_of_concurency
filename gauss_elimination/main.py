@@ -1,7 +1,7 @@
 import os
 import sys
+import numpy as np
 from typing import Dict, List, Tuple
-import torch
 from task.task import Task
 from input_parser.input_parser import parse_input
 from collections import deque
@@ -17,7 +17,7 @@ def parse_args():
         sys.exit(1)
     return sys.argv[1]
 
-def create_a_function(A, n_tensor, m_tensor, i, k):
+def create_a_function(A, m_tensor, i, k):
     def task_function():
         m_tensor.__setitem__((k, i), A.__getitem__((k, i)) / A.__getitem__((i, i)))
     return task_function
@@ -27,7 +27,7 @@ def create_b_function(A, n_tensor, m_tensor, i, j, k):
         n_tensor.__setitem__((i, j, k), A.__getitem__((i, j)) * m_tensor.__getitem__((k, i)))
     return task_function
 
-def create_c_function(A, n_tensor, m_tensor, i, j, k):
+def create_c_function(A, n_tensor, i, j, k):
     def task_function():
         A.__setitem__((k, j), A.__getitem__((k, j)) - n_tensor.__getitem__((i, j, k)))
     return task_function
@@ -58,14 +58,14 @@ def create_h_function(A, s_tensor, i, j, k):
     return task_function
 
 def create_tasks(
-        A: torch.Tensor,
-        m_tensor: torch.Tensor,
-        n_tensor: torch.Tensor,
-        q_tensor: torch.Tensor,
-        r_tensor: torch.Tensor,
-        s_tensor: torch.Tensor,
+        A: np.ndarray,
+        m_tensor: np.ndarray,
+        n_tensor: np.ndarray,
+        q_tensor: np.ndarray,
+        r_tensor: np.ndarray,
+        s_tensor: np.ndarray,
 ) -> Tuple[List[Task], List[Task], List[Task]]:
-    n, m = A.size()
+    n, m = A.shape
 
     # m_k,i = M_k,i / M_i,i
     a_tasks = []
@@ -109,7 +109,7 @@ def create_tasks(
                 task_id=task_id,
                 variable=variable,
                 uses=uses,
-                func=create_a_function(A, n_tensor, m_tensor, i, k),
+                func=create_a_function(A, m_tensor, i, k),
             )
             a_tasks.append(a_task)
             tasks.append(a_task)
@@ -133,7 +133,7 @@ def create_tasks(
                     task_id=task_id,
                     variable=variable,
                     uses=uses,
-                    func=create_c_function(A, n_tensor, m_tensor, i, j, k)
+                    func=create_c_function(A, n_tensor, i, j, k)
                 )
                 c_tasks.append(c_task)
                 tasks.append(c_task)
@@ -242,16 +242,16 @@ def foata_normal_form(alphabet: List[str], tasks: List[Task]) -> List[set[Task]]
 
     return foata_forms
 
-def gauss_elimination(A: torch.Tensor, b: torch.Tensor) -> None:
-    n = A.size(0)
-    A_aug = torch.hstack((A, b))
-    n, m = A_aug.size()
+def gauss_elimination(A: np.ndarray, b: np.ndarray) -> None:
+    n = A.shape[0]
+    A_aug = np.hstack((A, b))
+    n, m = A_aug.shape
 
-    m_tensor = torch.zeros((n, n)).float()
-    n_tensor = torch.zeros((n, m, n)).float()
-    q_tensor = torch.zeros(n).float()
-    r_tensor = torch.zeros((n,m)).float()
-    s_tensor = torch.zeros((n,m,n)).float()
+    m_tensor = np.zeros((n, n)).astype(np.float32)
+    n_tensor = np.zeros((n, m, n)).astype(np.float32)
+    q_tensor = np.zeros(n).astype(np.float32)
+    r_tensor = np.zeros((n,m)).astype(np.float32)
+    s_tensor = np.zeros((n,m,n)).astype(np.float32)
     tasks = create_tasks(A_aug, m_tensor, n_tensor, q_tensor, r_tensor, s_tensor)
     alphabet = [task.task_id for task in tasks]
 
@@ -262,7 +262,7 @@ def gauss_elimination(A: torch.Tensor, b: torch.Tensor) -> None:
             futures = [executor.submit(task.func) for task in form]
             concurrent.futures.wait(futures)
 
-    return A_aug[:, :-1], A_aug[:, -1]
+    return A_aug[:, :-1], A_aug[:, -1].reshape(-1, 1)
 
 def print_relation_graph(graph: Dict[Task, set[Task]], relation: str) -> None:
     output = f"{relation} = "
@@ -277,14 +277,24 @@ def print_relation_graph(graph: Dict[Task, set[Task]], relation: str) -> None:
     print(output)
 
 def print_foata_forms(foata_forms: List[set[Task]], word: str) -> None:
-    output = f"FNF([{word}]) = "
+    output = f"FNF([{word}]) =\n"
 
     single_forms = list(map(lambda form: f"[{' | '.join(task.task_id for task in form)}]", foata_forms))
     output += "\n".join(single_forms)
 
     print(output)
 
+def save_solution(A: np.ndarray, b: np.ndarray, file_path: str) -> None:
+    n = A.shape[0]
+    with open(file_path, 'w') as file:
+        file.write(f"{n}\n")
+        for i in range(n):
+            row = ' '.join(f"{A[i, j]:.4f}" for j in range(n))
+            file.write(f"{row}\n")
+        file.write(' '.join(f"{b[i, 0]:.4f}" for i in range(n)) + '\n')
+
 if __name__ == "__main__":
+    np.set_printoptions(precision=4, suppress=True)
     input_file = parse_args()
 
     A, b = parse_input(input_file)
@@ -293,19 +303,18 @@ if __name__ == "__main__":
     print("Vector b:")
     print(b)
 
-    A_aug = torch.hstack((A, b))
-    n, m = A_aug.size()
-    m_tensor = torch.zeros((n, n)).float()
-    n_tensor = torch.zeros((n, m, n)).float()
-    q_tensor = torch.zeros(n).float()
-    r_tensor = torch.zeros((n,m)).float()
-    s_tensor = torch.zeros((n,m,n)).float()
+    A_aug = np.hstack((A, b))
+    n, m = A_aug.shape
+    m_tensor = np.zeros((n, n)).astype(np.float32)
+    n_tensor = np.zeros((n, m, n)).astype(np.float32)
+    q_tensor = np.zeros(n).astype(np.float32)
+    r_tensor = np.zeros((n,m)).astype(np.float32)
+    s_tensor = np.zeros((n,m,n)).astype(np.float32)
     tasks = create_tasks(A_aug, m_tensor, n_tensor, q_tensor, r_tensor, s_tensor)
     alphabet = [task.task_id for task in tasks]
 
     dependency_graph = create_dependency_graph(alphabet, tasks)
     diekert_graph = create_diekert_graph(alphabet, tasks)
-    print(dependency_graph)
 
     plot_graph(dependency_graph, input_file.split("/")[-1].split(".")[0])
     plot_graph(diekert_graph, input_file.split("/")[-1].split(".")[0] + "_diekert")
@@ -320,3 +329,5 @@ if __name__ == "__main__":
     print(A_cp)
     print("Resulting Vector b after Gauss Elimination:")
     print(b_cp)
+
+    save_solution(A_cp, b_cp, os.path.join("solutions", f"{input_file.split('/')[-1].split('.')[0]}_solution.txt"))
