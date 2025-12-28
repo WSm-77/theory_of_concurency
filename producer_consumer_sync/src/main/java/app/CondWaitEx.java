@@ -14,7 +14,7 @@ class UniqId {
 
 abstract class Person extends Thread {
     final int sleepTime;
-    private final int _id;
+    protected final int _id;
 
     Person () {
         final Random rand = new Random();
