@@ -14,17 +14,11 @@ abstract public class AbstractPhilosopher implements Callable<Double> {
     }
 
     protected void think() throws InterruptedException {
-//        System.out.println(String.format("Philosopher %d is thinking...", this.id));
         Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
-//        System.out.println(String.format("Philosopher %d stops thinking...", this.id));
     }
 
     protected void eat() throws InterruptedException {
-        // eating process...
-//        System.out.println(String.format("Philosopher %d is eating...", this.id));
         Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
-//        Thread.sleep(AbstractPhilosopher.SLEEP_TIME);
-//        System.out.println(String.format("Philosopher %d stops eating and releases forks", this.id));
     }
 
     @Override
@@ -36,8 +30,6 @@ abstract public class AbstractPhilosopher implements Callable<Double> {
             Thread.sleep(this.random.nextInt(AbstractPhilosopher.SLEEP_TIME));
 
             for (int i = 0; i < AbstractPhilosopher.CYCLES_COUNT; i++) {
-//                System.out.println(String.format("Philosopher %d cycle = %d", this.id, i));
-                // measure waiting time
                 long startTime = System.nanoTime();
 
                 this.acquireForks();

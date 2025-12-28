@@ -35,12 +35,6 @@ class Producer extends Person {
 
     public void run() {
         for (int i = 0; i < 100; ++i) {
-//            try {
-//                TimeUnit.MILLISECONDS.wait(this.sleepTime);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-
             synchronized (_buf) {
                 int waitCnt = 0;
                 while (_buf.isFull()) {
@@ -69,12 +63,6 @@ class Consumer extends Person {
 
     public void run() {
         for (int i = 0; i < 100; ++i) {
-//            try {
-//                TimeUnit.MILLISECONDS.wait(this.sleepTime);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-
             synchronized (_buf) {
                 int waitCnt = 0;
 
@@ -104,34 +92,10 @@ class Buffer {
 
     synchronized public void put(int i) {
         this.buffCount += i;
-//        if (!this.isFull()) {
-//            this.buffCount += i;
-//        }
-//
-//        this.notifyAll();
     }
 
-//    synchronized public int get() {
-//        if (!this.isEmpty()) {
-//            this.notifyAll();
-//            return 0;
-//        }
-//
-//        int ret = this.buffCount--;
-//        this.notifyAll();
-//
-//        return ret;
-//    }
-
     synchronized public int get() {
-//        if (!this.isEmpty()) {
-//            this.notifyAll();
-//            return 0;
-//        }
-
         int ret = this.buffCount--;
-//        this.notifyAll();
-
         return ret;
     }
 

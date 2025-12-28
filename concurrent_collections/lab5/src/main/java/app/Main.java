@@ -7,10 +7,6 @@ public class Main {
     public static void main(String[] args) throws InterruptedException {
         SyncList syncList = new SyncList();
 
-//        for (Integer i = 0; i < 10; i++) {
-//            syncList.add(i);
-//        }
-
         List<Thread> addingThreads = new ArrayList<>();
         List<Thread> containsThreads = new ArrayList<>();
         List<Thread> removeThreads = new ArrayList<>();

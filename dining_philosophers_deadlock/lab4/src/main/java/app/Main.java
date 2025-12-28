@@ -147,9 +147,6 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        // set number of philosophers/forks here
-//        final int forkCount = 150;
-//        final List<Integer> forkCounts = List.of(100, 200, 300);
         final List<Integer> forkCounts = List.of(5, 10, 20);
 
         final List<Integer> solutionsWithoutDeadlock = List.of(2, 3, 4, 5, 6);

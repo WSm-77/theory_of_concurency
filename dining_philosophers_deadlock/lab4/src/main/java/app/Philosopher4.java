@@ -22,9 +22,6 @@ public class Philosopher4 extends AbstractPhilosopher {
             firstFork.lock();
 
             if (secondFork.tryLock()) {
-//                System.out.println(String.format("Philosopher %d takes left fork", this.id));
-//                System.out.println(String.format("Philosopher %d takes right fork", this.id));
-
                 break;
             } else {
                 firstFork.unlock();

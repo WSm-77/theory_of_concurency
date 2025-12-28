@@ -29,10 +29,8 @@ public class Philosopher5 extends AbstractPhilosopher {
         this.canteen.acquire();
 
         firstFork.lock();
-//        System.out.println(String.format("Philosopher %d takes %s fork", this.id, firstForkString));
 
         secondFork.lock();
-//        System.out.println(String.format("Philosopher %d takes %s fork", this.id, secondForkString));
     }
 
     @Override

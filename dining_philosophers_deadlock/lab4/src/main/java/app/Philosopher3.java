@@ -28,11 +28,8 @@ public class Philosopher3 extends AbstractPhilosopher {
         }
 
         firstFork.acquire();
-//        System.out.println(String.format("Philosopher %d takes %s fork", this.id, firstForkStr));
-
 
         secondFork.acquire();
-//        System.out.println(String.format("Philosopher %d takes %s fork", this.id, secondForkStr));
     }
 
     @Override
